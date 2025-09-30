@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import {
+ import { useEffect, useMemo, useState, useCallback } from "react"
+ import {
   fetchPaperSummary,
   postPaperTrade,
   type PaperTrade,
@@ -67,7 +67,6 @@ function EquityChart({ data }: { data: Array<{ t: string; eq: number }> }) {
       Aún no hay puntos de equity (necesitas cerrar operaciones).
     </div>
   }
-  const xs = data.map((_,i)=>i)
   const ys = data.map(d=>d.eq)
   const minY = Math.min(...ys, 0)
   const maxY = Math.max(...ys, 0)
@@ -122,27 +121,31 @@ export default function Paper() {
   useEffect(() => { try { const u = localStorage.getItem("aura:user"); if (u) setUser(u) } catch {} }, [])
   useEffect(() => { try { localStorage.setItem("aura:user", user) } catch {} }, [user])
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       setLoading(true); setErr(null)
       const { trades, kpis } = await fetchPaperSummary(user, 500)
       setRows(trades ?? [])
       setKpis(kpis ?? {
-        realized_pnl: 0, trades_closed: 0, max_drawdown: 0, sharpe: 0, open_positions: [], n_trades: (trades ?? []).length
+        realized_pnl: 0, trades_closed: 0, max_drawdown: 0, sharpe: 0,
+        open_positions: [], n_trades: (trades ?? []).length
       })
       setUpdatedAt(new Date())
-    } catch (e: any) {
-      setErr(String(e?.message ?? e))
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setErr(msg)
     } finally {
       setLoading(false)
     }
-  }
-  useEffect(() => { load() }, []) // mount
+  }, [user])
+
+  useEffect(() => { load() }, [load])
   useEffect(() => {
     if (!autoRefresh) return
     const id = setInterval(() => load(), 60_000)
     return () => clearInterval(id)
-  }, [autoRefresh, user])
+  }, [autoRefresh, load])
+
 
   // equity
   const equity = useMemo(() => buildEquitySeries(rows ?? []), [rows])
@@ -194,7 +197,10 @@ export default function Paper() {
         fees_bp: Number(ntFees), slippage_bp: Number(ntSlip),
       })
       setPostMsg("Operación creada ✅"); setShowNew(false); await load()
-    } catch (e: any) { setPostMsg(`Error: ${String(e?.message ?? e)}`) }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setPostMsg(`Error: ${msg}`)
+      }
     finally { setPosting(false); setTimeout(()=> setPostMsg(null), 3500) }
   }
 

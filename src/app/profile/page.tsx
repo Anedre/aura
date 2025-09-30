@@ -41,7 +41,7 @@ export default function ProfilePage() {
       try {
         const pf = await getProfile(user_id);
         if (alive) setP(pf);
-      } catch (e) {
+      } catch {
         // opcional: manejar error
       }
     })();
@@ -72,9 +72,11 @@ export default function ProfilePage() {
       const res = await updateProfile(p!);
       setP(res);
       setMsg("Perfil actualizado ✅");
-    } catch (e: any) {
-      setMsg(`Error: ${e?.message ?? String(e)}`);
-    } finally {
+    } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e)
+        setMsg(`Error: ${msg}`)
+      }
+    finally {
       setSaving(false);
     }
   }
@@ -88,12 +90,17 @@ export default function ProfilePage() {
           symbol: i.symbol,
           action: i.action,
           p_conf: i.p_conf ?? null,
-          score: (i as any).score ?? null,
+          score: (() => {
+            const obj = i as Record<string, unknown>
+            return typeof obj.score === "number" ? obj.score : null
+          })(),
+
         }))
       );
       setMsg("Listo ✅");
-    } catch (e: any) {
-      setMsg(`Error: ${e?.message ?? String(e)}`);
+        } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setMsg(`Error: ${msg}`);
     }
   }
 
@@ -112,7 +119,8 @@ export default function ProfilePage() {
             Objetivo
             <select
               value={p.objective ?? ""}
-              onChange={(e) => upd("objective", e.target.value as any)}
+              onChange={(e) => upd("objective", e.target.value as UserProfile["objective"])}
+
               className="w-full bg-white/5 border border-white/10 rounded px-2 py-1"
             >
               <option value="ahorro">Ahorro</option>
@@ -125,7 +133,8 @@ export default function ProfilePage() {
             Riesgo
             <select
               value={p.risk ?? ""}
-              onChange={(e) => upd("risk", e.target.value as any)}
+              onChange={(e) => upd("risk", e.target.value as UserProfile["risk"])}
+
               className="w-full bg-white/5 border border-white/10 rounded px-2 py-1"
             >
               <option value="conservador">Conservador</option>

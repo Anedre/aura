@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { useParams, useSearchParams, useRouter, usePathname } from "next/navigation"
-import { fetchAssetDetail, postPaperTrade, recommendByAsset, type AssetRecommendation } from "@/lib/api"
+import { fetchAssetDetail, postPaperTrade, recommendByAsset, type AssetRecommendation, type PaperTrade } from "@/lib/api"
 
 /* ---------- Tipos ---------- */
 type Ohlcv = { t: string; o: number; h: number; l: number; c: number; v?: number }
@@ -24,7 +24,7 @@ type Detail = {
 }
 
 /* ---------- Utils ---------- */
-const isFiniteNum = (x: any): x is number => typeof x === "number" && Number.isFinite(x)
+const isFiniteNum = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x)
 const fmt = (n: number | null | undefined, d = 2) => (isFiniteNum(Number(n)) ? Number(n).toFixed(d) : "—")
 function clsAction(a: Signal["action"]) {
   return a === "BUY" ? { stroke: "stroke-emerald-400", fill: "fill-emerald-400" } :
@@ -65,13 +65,20 @@ function LineChart({
   const maxY = ys.length ? Math.max(...ys) : 1
   const span = Math.max(1e-6, maxY - minY)
 
-  const x = (i: number) => pad + i * ((width - 2 * pad) / Math.max(1, data.length - 1))
-  const y = (v: number) => height - pad - ((v - minY) / span) * (height - 2 * pad)
+  const x = useCallback(
+    (i: number) => pad + i * ((width - 2 * pad) / Math.max(1, data.length - 1)),
+    [data.length]
+  )
+  const y = useCallback(
+    (v: number) => height - pad - ((v - minY) / span) * (height - 2 * pad),
+    [minY, span]
+  )
 
   const path = useMemo(() => {
     if (data.length === 0) return ""
-    return data.map((d, i) => `${i ? "L" : "M"} ${x(i).toFixed(2)} ${y(Number(d.c)||0).toFixed(2)}`).join(" ")
-  }, [data, span])
+    return data.map((d, i) => `${i ? "L" : "M"} ${x(i).toFixed(2)} ${y(Number(d.c) || 0).toFixed(2)}`).join(" ")
+  }, [data, x, y])
+
 
   function idxFromClientX(clientX: number) {
     const box = svgRef.current?.getBoundingClientRect()
@@ -149,9 +156,11 @@ function Simulate({ symbol, lastPrice, externalPrice, externalSide }: {
   useEffect(() => { try { const u = localStorage.getItem("aura:user"); if (u) setUser(u) } catch {} }, [])
   useEffect(() => { try { localStorage.setItem("aura:user", user) } catch {} }, [user])
   useEffect(() => { if (externalPrice != null) setPrice(externalPrice) }, [externalPrice])
-  useEffect(() => { if (price == null) setPrice(lastPrice) }, [lastPrice])
-
-  const norm = (n: any, fb = 0) => (Number.isFinite(Number(n)) ? Number(n) : fb)
+  useEffect(() => { if (price == null) setPrice(lastPrice) }, [lastPrice, price])
+  const norm = (n: unknown, fb = 0) => {
+    const v = typeof n === "number" ? n : Number(n)
+    return Number.isFinite(v) ? v : fb
+  }
   async function doTrade(side: "BUY"|"SELL") {
     setMsg("Enviando…")
     try {
@@ -160,7 +169,10 @@ function Simulate({ symbol, lastPrice, externalPrice, externalSide }: {
         fees_bp: norm(fees, 0), slippage_bp: norm(slip, 0),
       })
       setMsg(`OK ${side} @ ${res.effective_price.toFixed(4)} (efectivo). Ver en Paper.`)
-    } catch (e: any) { setMsg(`Error: ${e?.message ?? String(e)}`) }
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e)
+        setMsg(`Error: ${msg}`)
+      }
   }
 
   return (
@@ -287,8 +299,9 @@ export default function AssetDetailPage() {
     try {
       const r = await recommendByAsset(symbol)
       setRec(r)
-    } catch (e:any) {
-      setRecErr(String(e?.message ?? e))
+   } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setRecErr(msg)
     } finally {
       setRecLoading(false)
     }

@@ -37,9 +37,23 @@ export default function HomePage() {
         const r = await fetch(`${API_BASE}/v1/feed?horizon=1d&min_conf=0.55`, { cache: "no-store" })
         setFeedHealth(r.ok ? "ok" : "error")
         if (r.ok) {
-          const data: any[] = await r.json()
-          const syms = Array.from(new Set((data ?? []).map(x => String(x?.symbol ?? "").toUpperCase()).filter(Boolean)))
+          const json: unknown = await r.json()
+          const arr = Array.isArray(json) ? json : []
+          const syms = Array.from(
+            new Set(
+              arr
+                .map((x) => {
+                  if (x && typeof x === "object" && "symbol" in (x as Record<string, unknown>)) {
+                    const v = (x as Record<string, unknown>).symbol
+                    return typeof v === "string" ? v.toUpperCase() : ""
+                  }
+                  return ""
+                })
+                .filter(Boolean)
+            )
+          )
           setRemoteSymbols(syms)
+
         }
       } catch {
         setFeedHealth("error")
@@ -164,6 +178,7 @@ export default function HomePage() {
                 placeholder="BTC-USD, ETH-USD, AAPL, SPY…"
                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-white/20"
                 aria-autocomplete="list"
+                role="combobox"
                 aria-expanded={open}
                 aria-controls="symbol-suggestions"
               />
