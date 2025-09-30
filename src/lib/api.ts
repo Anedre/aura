@@ -4,12 +4,17 @@ type Action = "BUY" | "SELL" | "ABSTAIN" | "HOLD";
 /* =========================
  * Config & helpers HTTP
  * =======================*/
-const RAW_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? '').trim().replace(/\/$/, '');
-const isBrowser = typeof window !== 'undefined';
+// --- Config & helpers HTTP (REEMPLAZO) ---
+const RAW_BASE = (process.env.NEXT_PUBLIC_AURA_API ?? process.env.NEXT_PUBLIC_API_BASE ?? '')
+  .trim()
+  .replace(/\/$/, ''); // sin slash final
 
-// En el navegador usamos SIEMPRE path relativo para pasar por el proxy de Next (rewrites) y evitar CORS.
-// En el servidor (SSR/Route Handlers) sí usamos la base absoluta si existe.
-const API_BASE = isBrowser ? '' : RAW_BASE;
+const isBrowser = typeof window !== 'undefined';
+const USE_PROXY = (process.env.NEXT_PUBLIC_AURA_PROXY ?? '0') === '1';
+
+// Navegador: si hay base explícita y NO usamos proxy → URL absoluta (evita 404/CORS en Amplify).
+// Con proxy (rewrites) → relativo. En servidor usamos base si existe.
+const API_BASE = (!USE_PROXY && RAW_BASE) ? RAW_BASE : (isBrowser ? '' : RAW_BASE);
 
 function qs(params: Record<string, string | number | boolean | undefined | null>): string {
   const sp = new URLSearchParams();
@@ -33,14 +38,10 @@ class HttpError extends Error {
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  // Si estamos en browser: url relativa '/v1/...'; en server: absoluta si hay base.
-  const url = `${API_BASE}${path}`;
+  const url = `${API_BASE}${path}`; // usa absoluta si corresponde
   const res = await fetch(url, {
     ...init,
-    headers: {
-      'content-type': 'application/json',
-      ...(init?.headers || {}),
-    },
+    headers: { 'content-type': 'application/json', ...(init?.headers || {}) },
     cache: 'no-store',
   });
   const text = await res.text();
@@ -51,11 +52,12 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-if (typeof window !== 'undefined') {
-  console.info('[AURA] API_BASE (browser) = relative via Next rewrites');
+if (isBrowser) {
+  console.info('[AURA] API_BASE (browser) =', API_BASE || '(relative via rewrites)');
 } else {
   console.info('[AURA] API_BASE (server) =', API_BASE || '(relative)');
 }
+
 
 /* =========================
  * Tipos compartidos
