@@ -164,7 +164,15 @@ function Simulate({ symbol, lastPrice, externalPrice, externalSide }: {
   async function doTrade(side: "BUY"|"SELL") {
     setMsg("Enviando…")
     try {
-      const res: PaperTrade = await postPaperTrade({ user, symbol, side, qty, price, fees_bp: fees, slippage_bp: slip })
+       const res: PaperTrade = await postPaperTrade({
+   user,
+   symbol,
+   side,
+   qty: norm(qty, 1),
+   price: norm(price, lastPrice),
+   fees_bp: norm(fees, 0),
+   slippage_bp: norm(slip, 0),
+ })
       setMsg(`OK ${side} @ ${res.effective_price.toFixed(4)} (efectivo). Ver en Paper.`)
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e)

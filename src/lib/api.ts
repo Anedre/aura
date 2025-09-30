@@ -1,5 +1,4 @@
 // src/lib/api.ts
-type Side = "BUY" | "SELL";
 type Action = "BUY" | "SELL" | "ABSTAIN" | "HOLD";
 
 /* =========================
@@ -52,12 +51,9 @@ async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-// Log útil en dev para confirmar el modo
 if (typeof window !== 'undefined') {
-  // eslint-disable-next-line no-console
   console.info('[AURA] API_BASE (browser) = relative via Next rewrites');
 } else {
-  // eslint-disable-next-line no-console
   console.info('[AURA] API_BASE (server) =', API_BASE || '(relative)');
 }
 
