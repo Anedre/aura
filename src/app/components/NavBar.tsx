@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getSession, clearSession, type Session } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import { logout } from "@/lib/api";
 
 export default function NavBar() {
   const [sess, setSess] = useState<Session | null>(null);
@@ -19,10 +20,14 @@ export default function NavBar() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  function logout() {
-    clearSession();
-    setSess(null);
-    router.replace("/");
+  async function doLogout() {
+    try {
+      await logout();    // cierra sesión Cognito (tokens)
+    } finally {
+      clearSession();    // limpia sesión UI local
+      setSess(null);
+      router.replace("/");
+    }
   }
 
   return (
@@ -39,15 +44,28 @@ export default function NavBar() {
               <Link href="/profile" className="opacity-90 hover:opacity-100">
                 {sess.email?.split("@")[0] || "perfil"}
               </Link>
-              <button onClick={logout}
-                className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10">
+              <button
+                onClick={doLogout}
+                className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10"
+              >
                 Salir
               </button>
             </div>
           ) : (
-            <Link href="/login" className="px-3 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white">
-              Iniciar sesión
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/login"
+                className="px-3 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white"
+              >
+                Iniciar sesión
+              </Link>
+              <Link
+                href="/register"
+                className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10"
+              >
+                Registrarse
+              </Link>
+            </div>
           )}
         </div>
       </nav>

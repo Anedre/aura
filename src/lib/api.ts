@@ -1,10 +1,22 @@
+
 // src/lib/api.ts
+
+import { signIn, fetchAuthSession, signOut as cognitoSignOut } from 'aws-amplify/auth';
+import {
+  signUp,
+  confirmSignUp,
+  resendSignUpCode,
+} from "aws-amplify/auth";
+
+
 type Action = "BUY" | "SELL" | "ABSTAIN" | "HOLD";
 
 /* =========================
  * Config & helpers HTTP
  * =======================*/
 // --- Config & helpers HTTP (REEMPLAZO) ---
+
+
 const RAW_BASE = (process.env.NEXT_PUBLIC_AURA_API ?? process.env.NEXT_PUBLIC_API_BASE ?? '')
   .trim()
   .replace(/\/$/, ''); // sin slash final
@@ -38,24 +50,45 @@ class HttpError extends Error {
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${API_BASE}${path}`; // usa absoluta si corresponde
+  const url = `${API_BASE}${path}`;
+  const auth = await authHeader();
+
   const res = await fetch(url, {
     ...init,
-    headers: { 'content-type': 'application/json', ...(init?.headers || {}) },
+    headers: {
+      'content-type': 'application/json',
+      ...auth,
+      ...(init?.headers || {}),
+    },
     cache: 'no-store',
   });
+
   const text = await res.text();
   const data = text ? (JSON.parse(text) as unknown) : (undefined as unknown);
   if (!res.ok) {
+    // Tu HttpError existente
     throw new HttpError(`HTTP ${res.status} ${res.statusText} @ ${url}`, res.status, data);
   }
   return data as T;
 }
 
+
 if (isBrowser) {
   console.info('[AURA] API_BASE (browser) =', API_BASE || '(relative via rewrites)');
 } else {
   console.info('[AURA] API_BASE (server) =', API_BASE || '(relative)');
+}
+
+
+async function authHeader(): Promise<Record<string, string>> {
+  if (typeof window === 'undefined') return {}; // no hay sesión del usuario en server
+  try {
+    const { tokens } = await fetchAuthSession();
+    const id = tokens?.idToken?.toString();
+    return id ? { Authorization: `Bearer ${id}` } : {};
+  } catch {
+    return {};
+  }
 }
 
 
@@ -361,19 +394,63 @@ export async function pingPaper(): Promise<boolean> {
  * Auth (Login)
  * =======================*/
 export type Session = { user_id: string; token: string; email: string; name?: string };
-type SessionRaw = { token: string; email: string; name?: string; user_id?: string };
 
 export async function login(email: string, password: string): Promise<Session> {
-  const s = await fetchJson<SessionRaw>(`/v1/login`, {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  });
-  if (!s?.token || !s?.email) {
-    throw new Error("Respuesta de login inválida.");
-  }
-  const user_id = s.user_id ?? s.email; // fallback si el backend no envía user_id
-  return { user_id, token: s.token, email: s.email, name: s.name };
+  // 1) SRP con Cognito
+  await signIn({ username: email, password });
+
+  // 2) Leer tokens de la sesión actual
+  const { tokens } = await fetchAuthSession();
+  const idToken = tokens?.idToken?.toString();
+  if (!idToken) throw new Error("No se obtuvo ID token de Cognito.");
+
+  // 3) Extraer claims en forma segura (sin any)
+  type Payload = Record<string, unknown>;
+  const payload: Payload =
+    tokens?.idToken && typeof tokens.idToken === "object" && "payload" in tokens.idToken
+      ? (tokens.idToken as { payload?: Payload }).payload ?? {}
+      : {};
+
+  const str = (v: unknown): string | undefined =>
+    typeof v === "string" ? v : undefined;
+
+  const user_id =
+    str(payload["sub"]) ??
+    str(payload["cognito:username"]) ??
+    email;
+
+  const name = str(payload["name"]);
+  const emailClaim = str(payload["email"]) ?? email;
+
+  return { user_id: String(user_id), token: idToken, email: emailClaim, name };
 }
+
+
+export async function signup(email: string, password: string, attrs?: { name?: string }): Promise<void> {
+  await signUp({
+    username: email,
+    password,
+    options: {
+      userAttributes: { email, ...(attrs?.name ? { name: attrs.name } : {}) },
+      autoSignIn: false,
+    },
+  });
+}
+
+
+export async function logout(): Promise<void> {
+  await cognitoSignOut(); // invalida tokens en el cliente Amplify
+}
+
+export async function confirmSignup(email: string, code: string): Promise<void> {
+  await confirmSignUp({ username: email, confirmationCode: code });
+}
+
+export async function resendConfirmation(email: string): Promise<void> {
+  await resendSignUpCode({ username: email });
+}
+
+
 // --- Perfil (endpoints) ---
 // === PERFIL (endpoints) ===
 export async function getProfile(user_id?: string): Promise<UserProfile | null> {
@@ -436,3 +513,8 @@ export async function recommendByProfile(user_id: string): Promise<ProfileReco> 
 }
 
 
+
+// --- AÑADIR AL FINAL DE src/lib/api.ts ---
+
+
+export { fetchJson as apiFetch };

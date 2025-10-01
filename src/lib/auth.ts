@@ -16,10 +16,10 @@ export function setSession(s: Session) {
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {}
 }
 
+// ...
 export function clearSession() {
   try { localStorage.removeItem(KEY); } catch {}
 }
-
 // helper para obtener user_id “razonable” cuando aún no hay login
 export function getUserIdOr(emailFallback = "demo@local"): string {
   const s = getSession();
@@ -37,3 +37,4 @@ export function getEmailFromIdToken(): string | null {
   const payload = JSON.parse(atob(t.split(".")[1]));
   return payload.email || payload["cognito:username"] || null;
 }
+

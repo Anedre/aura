@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-amplify/auth": "^6.16.0",
+    "aws-amplify": "^6.15.7",
     "next": "15.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0"

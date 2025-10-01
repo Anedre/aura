@@ -40,11 +40,9 @@ export default function AppBoot() {
       <LoadingScreen show={!ready} />
       {bad && (
         <div className="fixed top-0 inset-x-0 z-[60]">
-          <div className="mx-auto max-w-6xl px-4">
-            <div className="mt-2 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm px-3 py-2">
-              <b>Advertencia:</b> no se pudo verificar {health.feed === false && "Feed"}{health.feed === false && health.paper === false && " y "}
-              {health.paper === false && "Paper"}.
-              La app seguirá cargando con capacidades limitadas.
+          <div className="fixed inset-x-0 top-0 z-40 pointer-events-none">
+            <div className="mx-auto max-w-6xl px-4 py-2 rounded-b-xl bg-amber-500/15 text-amber-200 border border-amber-400/20 shadow pointer-events-auto">
+              {/* tu texto y botón de cerrar */}
             </div>
           </div>
         </div>
