@@ -1,6 +1,5 @@
 // src/app/amplify-init.tsx
 'use client';
-
 import { useEffect, useRef } from 'react';
 import { Amplify } from 'aws-amplify';
 import { amplifyConfig } from '@/lib/amplify-config';
@@ -12,10 +11,7 @@ export default function AmplifyInit() {
       Amplify.configure(amplifyConfig);
       done.current = true;
       if (process.env.NODE_ENV !== 'production') {
-        console.log('[AURA] Amplify configured:', {
-          region: amplifyConfig.Auth?.Cognito?.region,
-          userPoolId: amplifyConfig.Auth?.Cognito?.userPoolId?.slice(-6),
-        });
+        console.log('[AURA] Amplify.configure hecho');
       }
     }
   }, []);
