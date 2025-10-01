@@ -40,7 +40,17 @@ export default function HomePage() {
         setFeedHealth(r.ok ? "ok" : "error");
         if (r.ok) {
           const json: unknown = await r.json();
-          // ... (tu lógica de símbolos)
+
+          // Normaliza y extrae símbolos únicos del feed
+          const arr = Array.isArray(json) ? (json as Array<Record<string, unknown>>) : [];
+          const syms = Array.from(new Set(
+            arr.map(x => {
+              const v = x?.symbol;
+              return typeof v === "string" ? v.toUpperCase() : null;
+            }).filter(Boolean) as string[]
+          ));
+
+          setRemoteSymbols(syms);
         }
       } catch {
         setFeedHealth("error");

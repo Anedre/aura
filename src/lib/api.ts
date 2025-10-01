@@ -28,6 +28,8 @@ const USE_PROXY = (process.env.NEXT_PUBLIC_AURA_PROXY ?? '0') === '1';
 // Con proxy (rewrites) → relativo. En servidor usamos base si existe.
 const API_BASE = (!USE_PROXY && RAW_BASE) ? RAW_BASE : (isBrowser ? '' : RAW_BASE);
 
+
+
 function qs(params: Record<string, string | number | boolean | undefined | null>): string {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
@@ -451,35 +453,23 @@ export async function resendConfirmation(email: string): Promise<void> {
 }
 
 
-// --- Perfil (endpoints) ---
 // === PERFIL (endpoints) ===
-export async function getProfile(user_id?: string): Promise<UserProfile | null> {
+export async function getProfile(_user_id?: string): Promise<UserProfile | null> {
+  void _user_id; // marcar como "usado" sin alterar la lógica
   try {
-    if (user_id) {
-      const q = new URLSearchParams({ user: user_id }).toString();
-      return await fetchJson<UserProfile>(`/v1/profile?${q}`);
-    }
-    const me = await fetchJson<Partial<UserProfile> & { email?: string }>(`/v1/me`);
-    return {
-      user_id: me.user_id ?? me.email,
-      objective: me.objective,
-      risk: me.risk,
-      horizon_months: me.horizon_months,
-      capital: me.capital,
-      constraints: Array.isArray(me.constraints) ? me.constraints : [],
-    };
+    return await fetchJson("/v1/profile");
   } catch {
     return null;
   }
 }
 
 export async function updateProfile(p: UserProfile): Promise<UserProfile> {
-  const qs = p.user_id ? `?${new URLSearchParams({ user: p.user_id }).toString()}` : "";
-  return fetchJson<UserProfile>(`/v1/profile${qs}`, {
-    method: "PATCH",
+  return fetchJson<UserProfile>(`/v1/profile`, {
+    method: "POST",
     body: JSON.stringify(p),
   });
 }
+
 
 export type ProfileReco = {
   items: Array<{ symbol: string; action: "BUY" | "SELL" | "ABSTAIN"; p_conf?: number; score?: number }>;

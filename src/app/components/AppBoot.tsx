@@ -3,12 +3,22 @@
 import { useEffect, useState } from "react";
 import { pingFeed, pingPaper } from "@/lib/api";
 import LoadingScreen from "@/app/components/LoadingScreen";
+// 👉 AÑADE:
+import { Amplify } from "aws-amplify";
+import { amplifyConfig } from "@/lib/amplify-config";
 
 type Health = { feed: boolean | null; paper: boolean | null };
+
+
 
 export default function AppBoot() {
   const [ready, setReady] = useState(false);
   const [health, setHealth] = useState<Health>({ feed: null, paper: null });
+
+   // 👉 AÑADE: configurar Amplify una sola vez en el cliente
+  useEffect(() => {
+    Amplify.configure(amplifyConfig);
+  }, []);
 
   useEffect(() => {
     let alive = true;
