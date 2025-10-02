@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { login } from "@/lib/api";
 import { setSession } from "@/lib/auth";
@@ -23,7 +23,7 @@ function LoginInner() {
     setLoading(true);
     try {
       const s = await login(email, password);
-      setSession(s);
+      setSession(s); // toca localStorage, pero ya estamos en cliente
       router.replace(next);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);
@@ -93,6 +93,11 @@ function LoginInner() {
 }
 
 export default function LoginPage() {
+  // Gate de hidratación: evita un primer render distinto al del servidor
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+  if (!ready) return null;
+
   return (
     <Suspense fallback={<div className="p-6">Cargando…</div>}>
       <LoginInner />
