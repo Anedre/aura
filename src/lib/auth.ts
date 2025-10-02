@@ -1,11 +1,11 @@
 // src/lib/auth.ts
 export type Session = { user_id: string; email: string; token: string };
 
-const KEY = "aura:session";
+export const SESSION_KEY = "aura:session";
 
 export function getSession(): Session | null {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(SESSION_KEY);
     return raw ? (JSON.parse(raw) as Session) : null;
   } catch {
     return null;
@@ -13,12 +13,12 @@ export function getSession(): Session | null {
 }
 
 export function setSession(s: Session) {
-  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch {}
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch {}
 }
 
 // ...
 export function clearSession() {
-  try { localStorage.removeItem(KEY); } catch {}
+  try { localStorage.removeItem(SESSION_KEY); } catch {}
 }
 // helper para obtener user_id “razonable” cuando aún no hay login
 export function getUserIdOr(emailFallback = "demo@local"): string {

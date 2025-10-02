@@ -1,9 +1,9 @@
-// src/app/register/page.tsx
 "use client";
 
 import { useState } from "react";
 import { signup, confirmSignup, resendConfirmation } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import AuthShell from "@/app/components/AuthShell";
 
 function errMsg(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -18,8 +18,9 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [code, setCode] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
 
+  const [code, setCode] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -66,101 +67,115 @@ export default function RegisterPage() {
     }
   }
 
-  return (
-    <main className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto max-w-sm p-6">
-        {step === "form" ? (
-          <>
-            <h1 className="text-xl font-semibold mb-4">Crear cuenta</h1>
-            <form onSubmit={onSubmit} className="space-y-3">
-              <div>
-                <label className="block text-sm mb-1">Nombre</label>
-                <input
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Email</label>
-                <input
-                  type="email"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Contraseña</label>
-                <input
-                  type="password"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              {msg && <p className="text-sm opacity-80">{msg}</p>}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-xl px-3 py-2 bg-emerald-600/80 hover:bg-emerald-600 text-white"
-              >
-                {loading ? "Creando…" : "Crear cuenta"}
-              </button>
-            </form>
-          </>
-        ) : (
-          <>
-            <h1 className="text-xl font-semibold mb-4">Confirmar cuenta</h1>
-            <form onSubmit={onConfirm} className="space-y-3">
-              <div>
-                <label className="block text-sm mb-1">Email</label>
-                <input
-                  type="email"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  readOnly
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Código</label>
-                <input
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="Código enviado a tu correo"
-                  required
-                />
-              </div>
-              {msg && <p className="text-sm opacity-80">{msg}</p>}
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex-1 rounded-xl px-3 py-2 bg-emerald-600/80 hover:bg-emerald-600 text-white"
-                >
-                  {loading ? "Confirmando…" : "Confirmar"}
-                </button>
-                <button
-                  type="button"
-                  onClick={onResend}
-                  disabled={loading}
-                  className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 border border-white/10"
-                >
-                  Reenviar código
-                </button>
-              </div>
-            </form>
-          </>
-        )}
-        <div className="mt-4 text-sm">
-          ¿Ya tienes cuenta? <a className="underline" href="/login">Inicia sesión</a>
+  return step === "form" ? (
+    <AuthShell
+      title="Crear cuenta"
+      subtitle="Configura tu acceso para empezar"
+      footer={
+        <div>
+          ¿Ya tienes cuenta?{" "}
+          <a className="link" href="/login">Inicia sesión</a>
         </div>
-      </div>
-    </main>
+      }
+    >
+      <form onSubmit={onSubmit} className="space-y-3" aria-busy={loading}>
+        <div>
+          <label className="block text-sm mb-1">Nombre</label>
+          <input
+            className="input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            autoComplete="name"
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">Email</label>
+          <input
+            type="email"
+            className="input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+          />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">Contraseña</label>
+          <div className="relative">
+            <input
+              type={showPwd ? "text" : "password"}
+              className="input pr-10"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="new-password"
+            />
+            <button
+              type="button"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs opacity-80 hover:opacity-100"
+              onClick={() => setShowPwd((v) => !v)}
+              aria-label={showPwd ? "Ocultar contraseña" : "Mostrar contraseña"}
+            >
+              {showPwd ? "🙈" : "👁️"}
+            </button>
+          </div>
+        </div>
+
+        {msg && (
+          <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 px-3 py-2 text-sm">
+            {msg}
+          </div>
+        )}
+
+        <button type="submit" disabled={loading} className="btn btn-primary w-full">
+          {loading ? "Creando…" : "Crear cuenta"}
+        </button>
+      </form>
+    </AuthShell>
+  ) : (
+    <AuthShell
+      title="Confirmar cuenta"
+      subtitle="Ingresa el código que te enviamos por correo"
+      footer={
+        <div>
+          ¿No recibiste el código?{" "}
+          <button onClick={onResend} className="link">Reenviar</button>
+        </div>
+      }
+    >
+      <form onSubmit={onConfirm} className="space-y-3" aria-busy={loading}>
+        <div>
+          <label className="block text-sm mb-1">Email</label>
+          <input type="email" className="input" value={email} readOnly />
+        </div>
+        <div>
+          <label className="block text-sm mb-1">Código</label>
+          <input
+            className="input"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            placeholder="Código enviado a tu correo"
+            required
+            autoComplete="one-time-code"
+          />
+        </div>
+
+        {msg && (
+          <div className="rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm">
+            {msg}
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button type="submit" disabled={loading} className="btn btn-primary flex-1">
+            {loading ? "Confirmando…" : "Confirmar"}
+          </button>
+          <button type="button" onClick={onResend} disabled={loading} className="btn">
+            Reenviar código
+          </button>
+        </div>
+      </form>
+    </AuthShell>
   );
 }

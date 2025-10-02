@@ -1,28 +1,149 @@
 @import "tailwindcss";
 
+/* ======== TEMA POR DEFECTO: NIGHT (AURA) ======== */
 :root {
-  --background:  rgb(8 10 12);;
-  --foreground:  rgb(236 240 244);
+  /* Night tokens (actuales) */
+  --background: #0B0D12;
+  --foreground: #EAF0F6;
+
+  --primary:   #6366F1; /* Indigo AURA */
+  --accent:    #10B981; /* Emerald AURA */
+
+  --muted:   #0F1318;
+  --card:    #0E1217;
+  --border:  #1F2937;
+  --ring:    #7C3AED80;
+
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --danger:  #EF4444;
+
+  /* Duraciones/transiciones base */
+  --aura-transition: 220ms;
 }
 
+/* ======== TEMA DAY (claro) ======== */
+:root[data-theme="day"] {
+  --background: #F7F8FB;
+  --foreground: #0B1220;
+
+  --primary:   #4F46E5; /* Indigo más sobrio para claro */
+  --accent:    #059669; /* Emerald un punto más oscuro */
+
+  --muted:   #FFFFFF;
+  --card:    #FFFFFF;
+  --border:  #E5E7EB;
+  --ring:    #7C3AED66;
+
+  --success: #16A34A;
+  --warning: #D97706;
+  --danger:  #DC2626;
+}
+
+/* Tailwind v4 tokens (inline theme) */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary:    var(--primary);
+  --color-accent:     var(--accent);
+  --color-muted:      var(--muted);
+  --color-card:       var(--card);
+  --color-border:     var(--border);
+  --color-ring:       var(--ring);
+
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Respetar preferencia del SO cuando no hay preferencia guardada */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    /* Si el usuario nunca eligió, pero su SO es claro, usamos day */
+    --background: #F7F8FB;
+    --foreground: #0B1220;
+    --primary:   #4F46E5;
+    --accent:    #059669;
+    --muted:   #FFFFFF;
+    --card:    #FFFFFF;
+    --border:  #E5E7EB;
+    --ring:    #7C3AED66;
+    --success: #16A34A;
+    --warning: #D97706;
+    --danger:  #DC2626;
   }
 }
 
+/* Fondo con radiales AURA */
 body {
-    background: radial-gradient(1200px 500px at 50% -100px, rgba(99,102,241,0.20), transparent 60%),
-              radial-gradient(800px 300px at 80% 0%, rgba(16,185,129,0.18), transparent 60%),
-              var(--background);
+  background:
+    radial-gradient(1200px 500px at 50% -100px, color-mix(in oklab, var(--primary) 20%, transparent), transparent 60%),
+    radial-gradient(800px 300px at 80% 0%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 60%),
+    var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+
+  /* Transición suave al cambiar tema */
+  transition:
+    background-color var(--aura-transition) ease,
+    color var(--aura-transition) ease,
+    background var(--aura-transition) ease;
+}
+
+/* ======== PRIMITIVAS DE UI ======== */
+.card {
+  @apply rounded-2xl border shadow;
+  background: color-mix(in oklab, var(--card) 96%, transparent);
+  border-color: color-mix(in oklab, var(--border) 75%, transparent);
+  box-shadow: 0 10px 30px color-mix(in oklab, black 70%, transparent);
+  transition: background-color var(--aura-transition) ease, border-color var(--aura-transition) ease, color var(--aura-transition) ease;
+}
+
+.input {
+  @apply w-full rounded-xl px-3 py-2 outline-none transition;
+  background: color-mix(in oklab, white 5%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+}
+.input:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  background: color-mix(in oklab, white 7%, transparent);
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-xl px-3 py-2 transition select-none;
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  background: color-mix(in oklab, white 6%, transparent);
+}
+.btn:hover { background: color-mix(in oklab, white 10%, transparent); }
+
+.btn-primary {
+  @apply text-white border-none;
+  background: var(--primary);
+}
+:root[data-theme="day"] .btn-primary {
+  @apply text-white;
+  background: var(--primary); /* mantiene contraste AA en claro */
+}
+.btn-primary:hover { filter: brightness(1.05); }
+
+.btn-ghost {
+  background: color-mix(in oklab, white 6%, transparent);
+}
+.btn-ghost:hover { background: color-mix(in oklab, white 10%, transparent); }
+
+.link {
+  @apply underline underline-offset-4 decoration-1;
+}
+.link:hover { text-decoration-thickness: 2px; }
+
+/* Orbes de marca */
+.aura-orb {
+  position: absolute; inset: auto;
+  width: 28rem; height: 28rem; border-radius: 9999px; filter: blur(64px);
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 35%, transparent), transparent);
+  opacity: .35; pointer-events: none;
+  transition: background var(--aura-transition) ease, opacity var(--aura-transition) ease;
+}
+.aura-orb--accent {
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--accent) 35%, transparent), transparent);
 }

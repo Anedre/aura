@@ -2,19 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getSession, clearSession, type Session } from "@/lib/auth";
+import { getSession, clearSession, type Session, SESSION_KEY } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import { logout } from "@/lib/api";
+import ThemeToggle from "@/app/components/ThemeToggle";
+import { useToast } from "@/app/components/toast/ToastProvider";
+import { useHealth } from "@/app/components/HealthContext";
 
 export default function NavBar() {
   const [sess, setSess] = useState<Session | null>(null);
   const router = useRouter();
+  const { toast } = useToast();
+  const { health } = useHealth();
 
-  // hidrata estado de sesión desde localStorage
   useEffect(() => {
     setSess(getSession());
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "aura:session") setSess(getSession());
+      if (e.key === SESSION_KEY) setSess(getSession());
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -22,12 +26,23 @@ export default function NavBar() {
 
   async function doLogout() {
     try {
-      await logout();    // cierra sesión Cognito (tokens)
+      await logout();
     } finally {
-      clearSession();    // limpia sesión UI local
+      clearSession();
       setSess(null);
       router.replace("/");
     }
+  }
+
+  function onNavFeed(e: React.MouseEvent) {
+    e.preventDefault();
+    if (health.feed === false) { toast("El Feed no está disponible en este momento.", "warning"); return; }
+    router.push("/feed");
+  }
+  function onNavPaper(e: React.MouseEvent) {
+    e.preventDefault();
+    if (health.paper === false) { toast("Paper Trading no está disponible por mantenimiento.", "warning"); return; }
+    router.push("/paper");
   }
 
   return (
@@ -35,9 +50,16 @@ export default function NavBar() {
       <nav className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
         <Link href="/" className="font-semibold tracking-wide">AURA</Link>
 
-        <div className="flex items-center gap-4 text-sm">
-          <Link href="/feed"  className="opacity-90 hover:opacity-100">Feed</Link>
-          <Link href="/paper" className="opacity-90 hover:opacity-100">Paper</Link>
+        <div className="flex items-center gap-2 text-sm">
+          <button onClick={onNavFeed} className="opacity-90 hover:opacity-100 px-2 py-1 rounded-lg">
+            Feed
+          </button>
+          <button onClick={onNavPaper} className="opacity-90 hover:opacity-100 px-2 py-1 rounded-lg">
+            Paper
+          </button>
+
+          {/* Toggle día/noche */}
+          <ThemeToggle />
 
           {sess ? (
             <div className="flex items-center gap-3">

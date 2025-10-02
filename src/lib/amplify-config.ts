@@ -7,7 +7,6 @@ const ENV = {
 
 // 🔐: en prod no truenes la app por una env perdida; loguea y usa fallback seguro.
 const warn = (k: string) => {
-  // eslint-disable-next-line no-console
   console.warn(`[AURA] Falta variable ${k} en build. Revisa Amplify Hosting → Variables de entorno.`);
 };
 
