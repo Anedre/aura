@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { pingFeed, pingPaper } from "@/lib/api";
@@ -8,44 +8,70 @@ import Splash from "@/app/components/Splash";
 import { Amplify } from "aws-amplify";
 import { amplifyConfig } from "@/lib/amplify-config";
 import { useHealth } from "@/app/components/HealthContext";
+import { useToast } from "@/app/components/toast/ToastProvider";
 
+// Rutas públicas donde no bloqueamos con health-check
 const PUBLIC_ROUTES = new Set<string>(["/login", "/register"]);
+
+// Pequeño helper para no colgarnos si la red está mal
+async function withTimeout<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return await Promise.race([
+    p,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
 
 export default function AppBoot() {
   const pathname = usePathname() || "/";
   const isPublic = useMemo(() => PUBLIC_ROUTES.has(pathname), [pathname]);
 
   const { setHealth } = useHealth();
-  const [ready, setReady] = useState(false);
-  const [mounted, setMounted] = useState(false); // para portal seguro
+  const { toast } = useToast();
 
-  // Configurar Amplify una sola vez en cliente
+  const [ready, setReady] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Evita doble configure() bajo StrictMode
+  const configuredRef = useRef(false);
+
   useEffect(() => {
-    Amplify.configure(amplifyConfig);
+    if (!configuredRef.current) {
+      Amplify.configure(amplifyConfig);
+      configuredRef.current = true;
+    }
     setMounted(true);
   }, []);
 
   useEffect(() => {
     let alive = true;
 
-    // En rutas públicas NO bloquees la UI con pings (evita splash prolongado)
+    // En rutas públicas no bloquees/hagas ruido
     if (isPublic) {
       setHealth({ ready: true });
       setReady(true);
-      return () => { alive = false; };
+      return () => {
+        alive = false;
+      };
     }
 
     const MIN_SPLASH_MS = 900;
+
     (async () => {
       const t0 = Date.now();
       try {
+        // Protegemos los pings con timeout y capturamos 4xx/5xx
         const [feedOk, paperOk] = await Promise.all([
-          // Trata 401 como "no disponible", no como fallo fatal
-          pingFeed().catch(() => false),
-          pingPaper().catch(() => false),
+          withTimeout(pingFeed().catch(() => false), 2500, false),
+          withTimeout(pingPaper().catch(() => false), 2500, false),
         ]);
+
         if (!alive) return;
+
         setHealth({ feed: !!feedOk, paper: !!paperOk });
+
+        // Notifica solo lo que falla, sin bloquear
+        if (!feedOk)  toast("Feed no disponible (v1/feed).", "warning");
+        if (!paperOk) toast("Paper trade no disponible (paper_trade/health).", "warning");
       } finally {
         const dt = Date.now() - t0;
         const rest = Math.max(0, MIN_SPLASH_MS - dt);
@@ -57,10 +83,12 @@ export default function AppBoot() {
       }
     })();
 
-    return () => { alive = false; };
-  }, [isPublic, setHealth]);
+    return () => {
+      alive = false;
+    };
+  }, [isPublic, setHealth, toast]);
 
-  // Splash via portal para no alterar el árbol SSR → evita #418
+  // Mantén el Splash por portal → no altera el árbol SSR (evita #418)
   if (!ready && mounted && typeof window !== "undefined") {
     return createPortal(<Splash label="Inicializando modelo y datos…" />, document.body);
   }
