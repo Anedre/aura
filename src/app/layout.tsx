@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import SessionGate from "@/app/components/SessionGate";
 import NavBar from "@/app/components/NavBar";
@@ -13,20 +14,19 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
-        {/* Pre-hidratación: aplica tema guardado para evitar FOUC */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-(function(){
-  try{
-    var k='aura:theme'; var v=localStorage.getItem(k);
-    if (v==='day') document.documentElement.setAttribute('data-theme','day');
-  }catch(e){}
-})();`,
-          }}
-        />
+        {/* Aplica 'day' ANTES de hidratar para evitar mismatch (no toca SSR) */}
+        <Script id="aura-theme" strategy="beforeInteractive">
+          {`
+            (function(){
+              try {
+                var v = localStorage.getItem('aura:theme');
+                if (v === 'day') document.documentElement.setAttribute('data-theme','day');
+              } catch (e) {}
+            })();
+          `}
+        </Script>
       </head>
       <body className="min-h-dvh bg-background text-foreground antialiased">
         <ToastProvider>

@@ -1,0 +1,30 @@
+﻿>>> E:\UPC 2025-02\AURA\frontend\src\lib\core\env.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\core\http.ts
+  const res = await fetch(url, { ...opts, headers, cache: "no-store" });
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\amplify-config.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\api-core.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\api.feed.ts
+  return apiFetch(`/v1/asset/${encodeURIComponent(symbol)}`);
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\api.health.ts
+  const r: any = await apiFetch(`/v1/feed`, { method: "HEAD", soft: true });
+  const r: any = await apiFetch(`/v1/paper_trade/health`, { soft: true });
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\api.paper.ts
+  return apiFetch(`/v1/paper_trade/list?limit=${limit}`, { auth: true });
+  return apiFetch(`/v1/paper_trade/place`, {
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\api.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\auth.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\errors.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\theme.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\types.ts
+

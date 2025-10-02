@@ -7,13 +7,15 @@ import {
   updateProfile,
   recommendByProfile,
   type UserProfile,
+  type FeedItem,             // ⬅️ agrega esto
+
 } from "@/lib/api";
 import { getSession, getUserIdOr } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
 type RecoItem = {
   symbol: string;
-  action: "BUY" | "SELL" | "ABSTAIN";
+  action: FeedItem["action"]; // ⬅️ ahora admite BUY | SELL | ABSTAIN | HOLD
   p_conf?: number | null;
   score?: number | null;
 };

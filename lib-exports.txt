@@ -1,0 +1,24 @@
+﻿>>> E:\UPC 2025-02\AURA\frontend\src\lib\core\env.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\core\http.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\amplify-config.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\api-core.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\api.feed.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\api.health.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\api.paper.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\api.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\auth.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\errors.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\theme.ts
+
+>>> E:\UPC 2025-02\AURA\frontend\src\lib\types.ts
+
