@@ -2,46 +2,71 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getSession, clearSession, type Session, SESSION_KEY } from "@/lib/auth";
+import {
+  getSession,              // ← lee sesión desde Cognito (async)
+  clearSessionCache,            // ← limpia el cache local
+  type AuraSession,            // ← alias de AuraSession
+  SESSION_KEY,
+  logout as authLogout,    // ← logout real (Cognito)
+} from "@/lib/auth";
 import { useRouter } from "next/navigation";
-import { logout } from "@/lib/api";
 import ThemeToggle from "@/app/components/ThemeToggle";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { useHealth } from "@/app/components/HealthContext";
 
 export default function NavBar() {
-  const [sess, setSess] = useState<Session | null>(null);
+  const [sess, setSess] = useState<AuraSession | null>(null);
   const router = useRouter();
   const { toast } = useToast();
   const { health } = useHealth();
 
+  // Lee sesión al montar y reacciona a cambios en localStorage
   useEffect(() => {
-    setSess(getSession());
+    let alive = true;
+
+    (async () => {
+      const s = await getSession();
+      if (!alive) return;
+      setSess(s);
+    })();
+
     const onStorage = (e: StorageEvent) => {
-      if (e.key === SESSION_KEY) setSess(getSession());
+      if (e.key === SESSION_KEY) {
+        (async () => setSess(await getSession()))();
+      }
     };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    return () => {
+      alive = false;
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   async function doLogout() {
     try {
-      await logout();
+      await authLogout();    // ← cierra sesión en Cognito
     } finally {
-      clearSession();
+      clearSessionCache();        // ← limpia cache local
       setSess(null);
-      router.replace("/");
+      router.replace("/login");
     }
   }
 
   function onNavFeed(e: React.MouseEvent) {
     e.preventDefault();
-    if (health.feed === false) { toast("El Feed no está disponible en este momento.", "warning"); return; }
+    if (health.feed === false) {
+      toast("El Feed no está disponible en este momento.", "warning");
+      return;
+    }
     router.push("/feed");
   }
+
   function onNavPaper(e: React.MouseEvent) {
     e.preventDefault();
-    if (health.paper === false) { toast("Paper Trading no está disponible por mantenimiento.", "warning"); return; }
+    if (health.paper === false) {
+      toast("Paper Trading no está disponible por mantenimiento.", "warning");
+      return;
+    }
     router.push("/paper");
   }
 
@@ -58,7 +83,6 @@ export default function NavBar() {
             Paper
           </button>
 
-          {/* Toggle día/noche */}
           <ThemeToggle />
 
           {sess ? (

@@ -1,72 +1,45 @@
-import { apiFetch } from "./core/http";
+// src/lib/api.feed.ts
+// API del Feed: tipos estrictos + fetch tipado. Reutiliza apiGet() que ya agrega Authorization.
 
-/** Horizonte de señal admitido en el backend */
-export type Horizon = "1d" | "1w";
+import { apiGet } from "@/lib/api";
 
-/** Item del feed principal (AURA) */
-export type FeedItem = {
+export type Action = "BUY" | "SELL" | "HOLD" | "ABSTAIN";
+export type Horizon = "1d" | "1w" | "1h" | "15m" | string;
+
+export interface Stops {
+  tp: number;
+  sl: number;
+}
+
+export interface FeedItem {
   symbol: string;
-  action: "BUY" | "SELL" | "ABSTAIN" | "HOLD";
-  p_conf?: number;
+  action: Action;
+  p_conf?: number;                 // 0..1
   sigma?: number;
+  sigma_limit?: number | null;
   horizon?: Horizon;
-  ts?: string;
+  ts?: string;                     // ISO
   last_close?: number;
-  stops?: { tp: number; sl: number } | null;
   model_version?: string;
-  abstain_reason?: string;
-  sigma_limit?: number;
-};
-
-function toQS(params?: string | { horizon?: Horizon; min_conf?: number }) {
-  if (!params) return "horizon=1d&min_conf=0.55";
-  if (typeof params === "string") return params.replace(/^\?/, "");
-  const h = params.horizon ?? "1d";
-  const m = params.min_conf ?? 0.55;
-  return `horizon=${encodeURIComponent(h)}&min_conf=${m}`;
+  abstain_reason?: string | null;
+  stops?: Stops | null;            // ⬅️ TIPO FUERTE (no {} ni unknown)
+  [k: string]: unknown;
 }
 
-/** Feed de señales */
+/** Obtiene el feed. `q` puede ser URLSearchParams, string o record plano. */
 export async function getFeed(
-  params?: string | { horizon?: Horizon; min_conf?: number }
+  q: URLSearchParams | string | Record<string, string | number | boolean>,
 ): Promise<FeedItem[]> {
-  return apiFetch<FeedItem[]>(`/v1/feed?${toQS(params)}`);
-}
-
-/** Detalle de activo + señales */
-export async function getAsset(symbol: string, bars?: number): Promise<unknown> {
-  const q = bars && Number.isFinite(bars) ? `?w=${bars}` : "";
-  return apiFetch(`/v1/asset/${encodeURIComponent(symbol)}${q}`);
-}
-
-/** Recomendación por activo (para la página /asset) */
-export type AssetRecommendation = {
-  action: "BUY" | "SELL" | "ABSTAIN" | "HOLD";
-  p_conf?: number;
-  stops?: { tp: number; sl: number } | null;
-};
-
-export async function recommendByAsset(symbol: string): Promise<AssetRecommendation> {
-  const sym = symbol.toUpperCase();
-  // 1) Intento con endpoint dedicado (si existe)
-  try {
-    return await apiFetch<AssetRecommendation>(
-      `/v1/recommend/asset?symbol=${encodeURIComponent(sym)}`
-    );
-  } catch {
-    // 2) Fallback: tomar del feed 1d
-    try {
-      const items = await getFeed({ horizon: "1d", min_conf: 0 });
-      const found = items.find((x) => x.symbol?.toUpperCase() === sym);
-      if (found) {
-        return {
-          action: found.action,
-          p_conf: found.p_conf,
-          stops: found.stops ?? null,
-        };
-      }
-    } catch {}
-    // 3) Último recurso
-    return { action: "ABSTAIN", p_conf: 0, stops: null };
+  let query: string;
+  if (q instanceof URLSearchParams) query = `?${q.toString()}`;
+  else if (typeof q === "string") query = q.startsWith("?") ? q : `?${q}`;
+  else {
+    query = `?${new URLSearchParams(
+      Object.entries(q).map(([k, v]) => [k, String(v)]),
+    ).toString()}`;
   }
+  return apiGet<FeedItem[]>(`/v1/feed${query}`);
 }
+
+// alias de compatibilidad si tenías imports antiguos
+export const fetchFeed = getFeed;

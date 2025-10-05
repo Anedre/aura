@@ -7,58 +7,87 @@ import {
   updateProfile,
   recommendByProfile,
   type UserProfile,
-  type FeedItem,             // ⬅️ agrega esto
-
-} from "@/lib/api";
-import { getSession, getUserIdOr } from "@/lib/auth";
+} from "@/lib/api.profile";
+import { getSession, type AuraSession } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
 type RecoItem = {
   symbol: string;
-  action: FeedItem["action"]; // ⬅️ ahora admite BUY | SELL | ABSTAIN | HOLD
+  action: "BUY" | "SELL" | "ABSTAIN" | "HOLD";
   p_conf?: number | null;
   score?: number | null;
 };
 
 export default function ProfilePage() {
-  // ✅ hooks dentro del componente
   const router = useRouter();
-  const sess = getSession(); // usa localStorage (solo cliente)
-  const user_id = sess?.user_id ?? getUserIdOr();
 
-  // guard: si no hay sesión, redirige al login
-  useEffect(() => {
-    if (!sess) router.replace("/login?next=/profile");
-  }, [sess, router]);
-
+  // sess === undefined -> cargando; null -> no autenticado; AuraSession -> ok
+  const [sess, setSess] = useState<AuraSession | null | undefined>(undefined);
   const [p, setP] = useState<UserProfile | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [recs, setRecs] = useState<RecoItem[] | null>(null);
 
-  // carga del perfil
+  // 1) Resolver sesión (asíncrona)
   useEffect(() => {
     let alive = true;
     (async () => {
       try {
-        const pf = await getProfile(user_id);
-        if (alive) setP(pf);
+        const s = await getSession(); // si es síncrono, await no molesta
+        if (alive) setSess(s);
       } catch {
-        // opcional: manejar error
+        if (alive) setSess(null);
       }
     })();
     return () => {
       alive = false;
     };
-  }, [user_id]);
+  }, []);
 
+  // 2) Redirigir si no hay sesión
+  useEffect(() => {
+    if (sess === null) {
+      router.replace("/login?next=/profile");
+    }
+  }, [sess, router]);
+
+  // 3) Cargar perfil cuando haya user_id
+  useEffect(() => {
+    if (!sess?.user_id) return;
+    let alive = true;
+    (async () => {
+      try {
+        const pf = await getProfile(sess.user_id);
+        if (alive) setP(pf);
+     } catch {
+        // podrías setear msg si quieres mostrar el error
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [sess?.user_id]);
+
+  // Pantallas de estado inicial
+  if (sess === undefined) {
+    return (
+      <main className="min-h-dvh bg-background text-foreground">
+        <div className="max-w-xl mx-auto p-6">Cargando sesión…</div>
+      </main>
+    );
+  }
+  if (sess === null) {
+    // mientras hace el replace, un fallback simple
+    return (
+      <main className="min-h-dvh bg-background text-foreground">
+        <div className="max-w-xl mx-auto p-6">Redirigiendo al login…</div>
+      </main>
+    );
+  }
   if (!p) {
     return (
       <main className="min-h-dvh bg-background text-foreground">
-        <div className="max-w-xl mx-auto p-6">
-          Cargando perfil…{" "}
-          {sess ? "" : <a className="underline" href="/login">Iniciar sesión</a>}
-        </div>
+        <div className="max-w-xl mx-auto p-6">Cargando perfil…</div>
       </main>
     );
   }
@@ -68,41 +97,38 @@ export default function ProfilePage() {
   }
 
   async function save() {
+    if (!sess?.user_id) return;     // ⬅️ guarda defensiva
     setSaving(true);
     setMsg(null);
     try {
-      const res = await updateProfile(p!);
+      const res = await updateProfile({ ...p!, user_id: sess.user_id });
       setP(res);
       setMsg("Perfil actualizado ✅");
     } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e)
-        setMsg(`Error: ${msg}`)
-      }
-    finally {
+      const m = e instanceof Error ? e.message : String(e);
+      setMsg(`Error: ${m}`);
+    } finally {
       setSaving(false);
     }
   }
 
   async function getTop5() {
+    if (!sess?.user_id) return;     // ⬅️ guarda defensiva
     setMsg("Calculando recomendaciones…");
     try {
-      const out = await recommendByProfile(user_id);
+      const out = await recommendByProfile(sess.user_id, 5);
       setRecs(
         out.items.map((i) => ({
           symbol: i.symbol,
           action: i.action,
           p_conf: i.p_conf ?? null,
-          score: (() => {
-            const obj = i as Record<string, unknown>
-            return typeof obj.score === "number" ? obj.score : null
-          })(),
-
-        }))
+          score: typeof i.score === "number" ? i.score : null,
+        })),
       );
       setMsg("Listo ✅");
-        } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setMsg(`Error: ${msg}`);
+    } catch (e: unknown) {
+      const m = e instanceof Error ? e.message : String(e);
+      setMsg(`Error: ${m}`);
     }
   }
 
@@ -111,9 +137,7 @@ export default function ProfilePage() {
       <div className="max-w-3xl mx-auto p-6 space-y-4">
         <header>
           <h1 className="text-2xl font-bold">Mi perfil de inversión</h1>
-          <p className="text-sm opacity-70">
-            Usado para personalizar recomendaciones.
-          </p>
+          <p className="text-sm opacity-70">Usado para personalizar recomendaciones.</p>
         </header>
 
         <section className="grid sm:grid-cols-2 gap-3">
@@ -122,7 +146,6 @@ export default function ProfilePage() {
             <select
               value={p.objective ?? ""}
               onChange={(e) => upd("objective", e.target.value as UserProfile["objective"])}
-
               className="w-full bg-white/5 border border-white/10 rounded px-2 py-1"
             >
               <option value="ahorro">Ahorro</option>
@@ -136,7 +159,6 @@ export default function ProfilePage() {
             <select
               value={p.risk ?? ""}
               onChange={(e) => upd("risk", e.target.value as UserProfile["risk"])}
-
               className="w-full bg-white/5 border border-white/10 rounded px-2 py-1"
             >
               <option value="conservador">Conservador</option>
@@ -173,7 +195,7 @@ export default function ProfilePage() {
                   e.target.value
                     .split(",")
                     .map((x) => x.trim())
-                    .filter(Boolean)
+                    .filter(Boolean),
                 )
               }
               className="w-full bg-white/5 border border-white/10 rounded px-2 py-1"
@@ -201,9 +223,7 @@ export default function ProfilePage() {
 
         {recs && (
           <section className="rounded-xl border border-white/10 bg-white/[0.02] p-4">
-            <h2 className="text-sm font-semibold opacity-80 mb-2">
-              Recomendaciones
-            </h2>
+            <h2 className="text-sm font-semibold opacity-80 mb-2">Recomendaciones</h2>
             <div className="grid gap-2">
               {recs.map((r, i) => (
                 <div

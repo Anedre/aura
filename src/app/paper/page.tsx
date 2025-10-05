@@ -5,8 +5,8 @@
   fetchPaperSummary,
   postPaperTrade,
   type PaperTrade,
-  type PaperKPIs
-} from "@/lib/api"
+  type PaperKPIs,
+} from "@/lib/api.paper";
 
 type Side = "BUY" | "SELL"
 type SortKey = "ts_desc" | "ts_asc" | "symbol" | "side"

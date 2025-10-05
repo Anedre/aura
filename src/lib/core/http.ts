@@ -1,5 +1,5 @@
 import { API_BASE } from "./env";
-import { getSession } from "@/lib/auth";
+import { getAuthHeader } from "@/lib/auth";
 
 export type ApiOptions = RequestInit & {
   /** Adjunta Authorization Bearer si hay sesión */
@@ -15,9 +15,8 @@ export async function apiFetch<T = unknown>(path: string, opts: ApiOptions = {})
 
   const headers = new Headers(opts.headers || {});
   if (opts.auth) {
-    const s = await Promise.resolve(getSession());
-    const token = s?.idToken || s?.accessToken || s?.token || s?.jwt;
-    if (token) headers.set("Authorization", `Bearer ${token}`);
+  const authHdr = getAuthHeader();          // ya lee del cache y arma el Bearer
+  Object.entries(authHdr).forEach(([k, v]) => headers.set(k, v));
   }
 
   const res = await fetch(url, { ...opts, headers, cache: "no-store" });

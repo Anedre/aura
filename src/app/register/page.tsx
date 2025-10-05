@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { signup, confirmSignup, resendConfirmation } from "@/lib/api";
+import {
+  register as signup,          // ⬅️ de auth.ts (Amplify/Cognito)
+  confirmRegister,             // ⬅️ de auth.ts
+  resendRegisterCode           // ⬅️ de auth.ts
+} from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import AuthShell from "@/app/components/AuthShell";
 
@@ -16,7 +20,7 @@ export default function RegisterPage() {
 
   const [step, setStep] = useState<"form" | "confirm">("form");
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+  const [name, setName] = useState("");        // opcional (ver nota arriba)
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
 
@@ -29,7 +33,8 @@ export default function RegisterPage() {
     setMsg(null);
     setLoading(true);
     try {
-      await signup(email, password, { name });
+      // auth.ts::register(email, password) actualmente solo envía { email } como atributo
+      await signup(email, password);
       setStep("confirm");
       setMsg("Te enviamos un código de verificación al correo.");
     } catch (err: unknown) {
@@ -44,7 +49,7 @@ export default function RegisterPage() {
     setMsg(null);
     setLoading(true);
     try {
-      await confirmSignup(email, code);
+      await confirmRegister(email, code);
       setMsg("Cuenta confirmada. Ahora puedes iniciar sesión.");
       router.replace(`/login?next=/profile`);
     } catch (err: unknown) {
@@ -58,7 +63,7 @@ export default function RegisterPage() {
     setMsg(null);
     setLoading(true);
     try {
-      await resendConfirmation(email);
+      await resendRegisterCode(email);
       setMsg("Código reenviado.");
     } catch (err: unknown) {
       setMsg(errMsg(err));

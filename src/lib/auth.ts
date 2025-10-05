@@ -1,182 +1,192 @@
 // src/lib/auth.ts
-// Amplify v6 (modular). Este archivo NO debe importar desde "@/lib/api".
-
+import "@/lib/amplify-config";
 import {
-  signIn,
-  signOut,
-  signUp,
-  confirmSignUp,
-  resendSignUpCode,
   fetchAuthSession,
+  getCurrentUser,
+  signIn as cognitoSignIn,
+  signOut as cognitoSignOut,
+  signUp as cognitoSignUp,
+  confirmSignUp as cognitoConfirmSignUp,
+  resendSignUpCode as cognitoResendSignUpCode,
 } from "aws-amplify/auth";
 
-export const SESSION_KEY = "aura:session";
+export const SESSION_KEY = "AURA_SESSION";
 
-/** Sesión persistida en localStorage */
-export type Session = {
-  token?: string;       // token genérico para Authorization
-  idToken?: string;     // JWT de id
-  accessToken?: string; // JWT de acceso
-  jwt?: string;         // alias (compatibilidad)
+/* ===================== Tipos ===================== */
+
+export interface AuthTokens {
+  idToken: string;
+  accessToken: string;
+  expiresAt: number; // epoch seconds
+}
+
+export interface AuraSession {
+  user_id: string;
   email?: string;
-  user_id?: string;     // id “amigable” para UI (p. ej. parte local del email)
+  name?: string;
+  tokens: AuthTokens;
+}
+export type Session = AuraSession;
+
+/** Forma mínima de los tokens que expone Amplify (lo suficiente para tipar). */
+type AmplifyJwtLike = {
+  toString(): string;
+  payload?: Record<string, unknown>;
 };
-
-/* ---------------- utilidades internas ---------------- */
-
-function isBrowser(): boolean {
-  return typeof window !== "undefined" && typeof localStorage !== "undefined";
+interface AmplifyTokensLike {
+  idToken: AmplifyJwtLike;
+  accessToken: AmplifyJwtLike;
 }
 
-function base64UrlToUtf8(b64url: string): string {
-  const b64 = b64url.replace(/-/g, "+").replace(/_/g, "/");
-  if (isBrowser()) {
-    // atob solo existe en navegador
-    const bin = atob(b64);
-    // binario → UTF-8
-    const bytes = Uint8Array.from(bin, (c) => c.charCodeAt(0));
-    const dec = new TextDecoder("utf-8");
-    return dec.decode(bytes);
-  } else {
-    // Node/SSR
-    return Buffer.from(b64, "base64").toString("utf8");
-  }
-}
+/* ===================== Cache local ===================== */
 
-type JwtClaims = {
-  sub?: string;
-  email?: string;
-  username?: string;
-  "cognito:username"?: string;
-} & Record<string, unknown>;
-
-function parseJwtClaims(jwt?: string): JwtClaims | null {
-  if (!jwt) return null;
-  const parts = jwt.split(".");
-  if (parts.length < 2) return null;
-  try {
-    const payload = base64UrlToUtf8(parts[1]);
-    return JSON.parse(payload) as JwtClaims;
-  } catch {
-    return null;
-  }
-}
-
-/** Deriva un user_id estable a partir de la sesión */
-function deriveUserId(s: Session): string | undefined {
-  // 1) Si ya viene, úsalo
-  if (s.user_id && s.user_id.trim()) return s.user_id.trim();
-
-  // 2) Derivarlo del email
-  if (s.email && s.email.includes("@")) {
-    const local = s.email.split("@")[0]?.trim();
-    if (local) return local;
-  }
-
-  // 3) Derivarlo de los claims del token (id/access/jwt)
-  const token = s.idToken ?? s.accessToken ?? s.jwt ?? s.token;
-  const claims = parseJwtClaims(token);
-  if (claims) {
-    const candidates = [
-      claims.username,
-      claims["cognito:username"],
-      claims.email,
-      claims.sub,
-    ].filter((v): v is string => typeof v === "string" && v.trim().length > 0);
-
-    if (candidates.length) {
-      const raw = candidates[0];
-      return raw.includes("@") ? raw.split("@")[0] : raw;
-    }
-  }
-
-  return undefined;
-}
-
-/* ---------------- API pública ---------------- */
-
-export function getSession(): Session | null {
-  if (!isBrowser()) return null;
+function readCache(): AuraSession | null {
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as Session) : null;
+    return raw ? (JSON.parse(raw) as AuraSession) : null;
   } catch {
     return null;
   }
 }
-
-export function setSession(s: Session): void {
-  if (!isBrowser()) return;
-  const user_id = deriveUserId(s);
-  const next: Session = user_id ? { ...s, user_id } : s;
-  localStorage.setItem(SESSION_KEY, JSON.stringify(next));
-  // Evento interno para vistas que deseen reaccionar (misma pestaña)
-  window.dispatchEvent(new Event("aura:session:changed"));
+export function setSession(sess: AuraSession) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(sess));
+  } catch {}
+}
+export function clearSessionCache() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(SESSION_KEY);
+  } catch {}
 }
 
-export function clearSession(): void {
-  if (!isBrowser()) return;
-  localStorage.removeItem(SESSION_KEY);
-  window.dispatchEvent(new Event("aura:session:changed"));
+/* ===================== Helpers ===================== */
+
+function pickUserId(payload?: Record<string, unknown> | null): string | null {
+  if (!payload) return null;
+  const p = payload as Record<string, unknown>;
+  return (
+    (p["sub"] as string | undefined) ??
+    (p["cognito:username"] as string | undefined) ??
+    (p["username"] as string | undefined) ??
+    (p["email"] as string | undefined) ??
+    null
+  );
+}
+function pickStr(payload: Record<string, unknown> | undefined, key: string): string | undefined {
+  const v = payload?.[key];
+  return typeof v === "string" ? v : undefined;
 }
 
-/** Devuelve el user_id o null si no hay sesión */
-export function getUserId(): string | null {
-  const s = getSession();
-  const uid = s && (s.user_id ?? deriveUserId(s));
-  return uid ?? null;
+function buildAuraSessionFromAmplify(tokensLike: AmplifyTokensLike): AuraSession | null {
+  if (!tokensLike?.accessToken || !tokensLike?.idToken) return null;
+
+  const idTokenStr = tokensLike.idToken.toString();
+  const accTokenStr = tokensLike.accessToken.toString();
+
+  const idPayload = tokensLike.idToken.payload ?? undefined;
+  const accPayload = tokensLike.accessToken.payload ?? undefined;
+
+  const user_id =
+    pickUserId(idPayload) ??
+    pickUserId(accPayload) ??
+    "anonymous";
+
+  const email = pickStr(idPayload, "email") ?? pickStr(accPayload, "email");
+  const name = pickStr(idPayload, "name") ?? pickStr(accPayload, "name");
+
+  const expRaw =
+    (accPayload?.["exp"] as unknown) ??
+    undefined;
+  const expiresAt =
+    typeof expRaw === "number"
+      ? expRaw
+      : Number(expRaw) > 0
+      ? Number(expRaw)
+      : Math.floor(Date.now() / 1000) + 300;
+
+  return {
+    user_id,
+    email,
+    name,
+    tokens: { idToken: idTokenStr, accessToken: accTokenStr, expiresAt },
+  };
 }
 
-/** Devuelve el user_id o un valor por defecto (por omisión: "guest") */
-export function getUserIdOr(fallback = "guest"): string {
-  return getUserId() ?? fallback;
+/* ===================== API pública ===================== */
+
+export async function getSession(): Promise<AuraSession | null> {
+  if (typeof window === "undefined") return null;
+  try {
+    const { tokens } = await fetchAuthSession();
+    const sess = buildAuraSessionFromAmplify(tokens as unknown as AmplifyTokensLike);
+    if (sess) setSession(sess);
+    return sess;
+  } catch {
+    return readCache();
+  }
+}
+export function getSessionSync(): AuraSession | null {
+  return readCache();
+}
+export function getAuthHeader(sess?: AuraSession | null): Record<string, string> {
+  const s = sess ?? getSessionSync();
+  return s ? { Authorization: `Bearer ${s.tokens.accessToken}` } : {};
+}
+export function isExpired(sess: AuraSession | null | undefined): boolean {
+  if (!sess?.tokens?.expiresAt) return true;
+  const skew = 30;
+  return sess.tokens.expiresAt <= Math.floor(Date.now() / 1000) + skew;
 }
 
-/* ---------------- Flujo de autenticación (Amplify v6) ---------------- */
+export async function signIn(username: string, password: string): Promise<AuraSession> {
+  await cognitoSignIn({ username, password });
+  const { tokens } = await fetchAuthSession();
+  const sess = buildAuraSessionFromAmplify(tokens as unknown as AmplifyTokensLike);
+  if (!sess) throw new Error("No se pudo obtener tokens de Cognito tras login.");
+  setSession(sess);
+  return sess;
+}
+export async function signOut(): Promise<void> {
+  try {
+    await cognitoSignOut();
+  } finally {
+    clearSessionCache();
+  }
+}
 
-export async function signup(
+/* Aliases usados por la UI */
+export const login = signIn;
+export const logout = signOut;
+
+/* Registro / Confirmación */
+export async function register(
   email: string,
   password: string,
-  attrs: Record<string, string> = {}
+  attrs?: { name?: string },
 ): Promise<void> {
-  await signUp({
+  await cognitoSignUp({
     username: email,
     password,
-    options: { userAttributes: { email, ...attrs } },
+    options: {
+      userAttributes: { email, ...(attrs?.name ? { name: attrs.name } : {}) },
+    },
   });
 }
-
-export async function confirmSignup(email: string, code: string): Promise<void> {
-  await confirmSignUp({ username: email, confirmationCode: code });
+export async function confirmRegister(email: string, code: string): Promise<void> {
+  await cognitoConfirmSignUp({ username: email, confirmationCode: code });
+}
+export async function resendRegisterCode(email: string): Promise<void> {
+  await cognitoResendSignUpCode({ username: email });
 }
 
-export async function resendConfirmation(email: string): Promise<void> {
-  await resendSignUpCode({ username: email });
-}
-
-export async function login(email: string, password: string): Promise<Session> {
-  // 1) Autenticar
-  await signIn({ username: email, password });
-
-  // 2) Obtener tokens activos
-  const { tokens } = await fetchAuthSession();
-  const idToken = tokens?.idToken?.toString();
-  const accessToken = tokens?.accessToken?.toString();
-  const token = idToken ?? accessToken ?? undefined;
-
-  // 3) Materializar Session (con user_id derivado)
-  const session: Session = {
-    token,
-    idToken,
-    accessToken,
-    jwt: token, // compatibilidad con código legado
-    email,
-  };
-  setSession(session);
-  return session;
-}
-
-export async function logout(): Promise<void> {
-  await signOut();
-  clearSession();
+export async function currentUserSub(): Promise<string | null> {
+  try {
+    const u = await getCurrentUser();
+    return u?.userId ?? null;
+  } catch {
+    return null;
+  }
 }

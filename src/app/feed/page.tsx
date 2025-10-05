@@ -1,11 +1,11 @@
-// src/app/feed/page.tsx
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { fetchFeed, type FeedItem, type Horizon } from "@/lib/api";
+import { getFeed, type FeedItem } from "@/lib/api.feed"; // ⬅️ módulo nuevo
 
+type Horizon = "1d" | "1w";
 type ActionFilter = "ALL" | "BUY" | "SELL" | "ABSTAIN";
 type SortKey = "conf" | "sigma" | "date";
 
@@ -51,10 +51,10 @@ function Card({ item }: { item: FeedItem }) {
   const ts = item.ts ? new Date(item.ts) : new Date();
   const safeDate = ts.toLocaleString();
   const hasStops =
-    !!item.stops && typeof item.stops?.tp === "number" && typeof item.stops?.sl === "number";
-  const rTp = pct(item.stops?.tp, item.last_close ?? undefined);
-  const rSl = pct(item.stops?.sl, item.last_close ?? undefined);
-  const rr = rrEst(item.stops?.tp, item.stops?.sl, item.last_close ?? undefined);
+    !!item.stops && typeof item.stops.tp === "number" && typeof item.stops.sl === "number";
+  const rTp = pct(item.stops?.tp, item.last_close);
+  const rSl = pct(item.stops?.sl, item.last_close);
+  const rr = rrEst(item.stops?.tp, item.stops?.sl, item.last_close);
 
   return (
     <article
@@ -86,27 +86,27 @@ function Card({ item }: { item: FeedItem }) {
             {item.horizon}
           </div>
 
-          {item.action === "ABSTAIN" && (
+          {item.action === "ABSTAIN" ? (
             <div className="col-span-2 text-amber-300/90">
               <span className="opacity-70">Motivo: </span>
               {item.abstain_reason ??
                 `σ=${(item.sigma ?? 0).toFixed(3)} > ${item.sigma_limit ?? "σ_max"}`}
             </div>
-          )}
+          ) : null}
 
-          {hasStops && (
+          {hasStops ? (
             <>
               <div>
                 <span className="opacity-70">TP: </span>
                 {item.stops!.tp.toFixed(4)}
-                {rTp != null && <span className="opacity-60"> ({rTp.toFixed(2)}%)</span>}
+                {rTp != null ? <span className="opacity-60"> ({rTp.toFixed(2)}%)</span> : null}
               </div>
               <div>
                 <span className="opacity-70">SL: </span>
                 {item.stops!.sl.toFixed(4)}
-                {rSl != null && <span className="opacity-60"> ({rSl.toFixed(2)}%)</span>}
+                {rSl != null ? <span className="opacity-60"> ({rSl.toFixed(2)}%)</span> : null}
               </div>
-              {rr != null && (
+              {rr != null ? (
                 <div className="col-span-2 text-xs">
                   <span className="opacity-70">R/R estimado: </span>
                   <span
@@ -121,9 +121,9 @@ function Card({ item }: { item: FeedItem }) {
                     {rr.toFixed(2)}x
                   </span>
                 </div>
-              )}
+              ) : null}
             </>
-          )}
+          ) : null}
         </div>
 
         <div className="mt-4">
@@ -230,7 +230,11 @@ function FeedInner() {
   useEffect(() => {
     setData(null);
     setErr(null);
-    fetchFeed({ horizon, min_conf: minConf })
+
+    const qs = new URLSearchParams();
+    qs.set("horizon", horizon);
+    qs.set("min_conf", String(minConf)); // 0..1
+    getFeed(qs)
       .then((d) => {
         if (horizon === "1w" && Array.isArray(d) && d.length === 0) {
           setHorizon("1d");
@@ -242,13 +246,13 @@ function FeedInner() {
       .catch((e: unknown) => setErr(e instanceof Error ? e.message : String(e)));
   }, [horizon, minConf, tick]);
 
-  const filtered = useMemo(() => {
+  const filtered: FeedItem[] = useMemo(() => {
     if (!Array.isArray(data)) return [];
     const f = data.filter((d) => {
       const passConf = (d.p_conf ?? 0) >= minConf;
       const passAct = action === "ALL" ? true : d.action === action;
       const passStops = onlyStops
-        ? d.stops && typeof d.stops.tp === "number" && typeof d.stops.sl === "number"
+        ? !!(d.stops && typeof d.stops.tp === "number" && typeof d.stops.sl === "number")
         : true;
       const passQ = q ? d.symbol.toLowerCase().includes(q.toLowerCase()) : true;
       return passConf && passAct && passStops && passQ;
@@ -298,9 +302,7 @@ function FeedInner() {
 
     const csv = [
       headers.join(","),
-      ...rows.map((r) =>
-        headers.map((h) => String(r[h] ?? "")).join(","),
-      ),
+      ...rows.map((r) => headers.map((h) => String(r[h] ?? "")).join(",")),
     ].join("\n");
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -463,35 +465,31 @@ function FeedInner() {
             Total bruto: {Array.isArray(data) ? data.length : 0} • Tras filtros: {filtered.length}
           </span>
 
-          {updatedAt && (
+          {updatedAt ? (
             <span className="ml-auto opacity-70">
               Última actualización: {updatedAt.toLocaleTimeString()}
             </span>
-          )}
+          ) : null}
         </section>
 
         {/* LISTA */}
         <section className="grid gap-4">
-          {data === null && (
+          {data === null ? (
             <>
               <SkeletonCard />
               <SkeletonCard />
               <SkeletonCard />
             </>
-          )}
-
-          {Array.isArray(data) &&
-            filtered.length > 0 &&
-            filtered.map((d, i) => <Card key={`${d.symbol}-${i}`} item={d} />)}
-
-          {Array.isArray(data) && filtered.length === 0 && (
+          ) : filtered.length > 0 ? (
+            filtered.map((d, i) => <Card key={`${d.symbol}-${i}`} item={d} />)
+          ) : (
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
               <div className="text-sm opacity-80 mb-2">
                 No hay señales con confianza ≥ {Math.round(minConf * 100)}%{" "}
                 {onlyStops ? "y con TP/SL" : ""}.
-                {Array.isArray(data) && data.length > 0 && (
+                {Array.isArray(data) && data.length > 0 ? (
                   <> Hay {data.length} señal(es) brutas disponibles.</>
-                )}
+                ) : null}
               </div>
               <div className="flex gap-2">
                 <button
@@ -538,4 +536,3 @@ export default function FeedPage() {
     </Suspense>
   );
 }
-
