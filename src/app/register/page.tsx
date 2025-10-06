@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import {
-  register as signup,          // ⬅️ de auth.ts (Amplify/Cognito)
-  confirmRegister,             // ⬅️ de auth.ts
-  resendRegisterCode           // ⬅️ de auth.ts
+  register as signup,          // Amplify/Cognito
+  confirmRegister,
+  resendRegisterCode
 } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import AuthShell from "@/app/components/AuthShell";
@@ -20,7 +20,7 @@ export default function RegisterPage() {
 
   const [step, setStep] = useState<"form" | "confirm">("form");
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");        // opcional (ver nota arriba)
+  const [name, setName] = useState("");        // opcional para UI/branding futuro
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
 
@@ -33,7 +33,6 @@ export default function RegisterPage() {
     setMsg(null);
     setLoading(true);
     try {
-      // auth.ts::register(email, password) actualmente solo envía { email } como atributo
       await signup(email, password);
       setStep("confirm");
       setMsg("Te enviamos un código de verificación al correo.");
@@ -51,7 +50,8 @@ export default function RegisterPage() {
     try {
       await confirmRegister(email, code);
       setMsg("Cuenta confirmada. Ahora puedes iniciar sesión.");
-      router.replace(`/login?next=/profile`);
+      // tras confirmar, que el siguiente paso sea completar su perfil
+      router.replace(`/login?next=${encodeURIComponent("/risk?first=1")}`);
     } catch (err: unknown) {
       setMsg(errMsg(err));
     } finally {
@@ -152,8 +152,9 @@ export default function RegisterPage() {
       <form onSubmit={onConfirm} className="space-y-3" aria-busy={loading}>
         <div>
           <label className="block text-sm mb-1">Email</label>
-          <input type="email" className="input" value={email} readOnly />
         </div>
+        <input type="email" className="input" value={email} readOnly />
+
         <div>
           <label className="block text-sm mb-1">Código</label>
           <input

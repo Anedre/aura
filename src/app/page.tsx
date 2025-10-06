@@ -4,12 +4,18 @@
 import React, { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthShell from "@/app/components/AuthShell";
-import { login, getSession } from "@/lib/auth"; // usa tu auth (Cognito)
+import { login, getSession } from "@/lib/auth";
+import { loadRiskProfile } from "@/lib/invest";
 
 function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/feed"; // destino por defecto
+
+  // decide destino por defecto según si tiene perfil o no
+  function decideDefaultNext(): string {
+    const saved = loadRiskProfile();
+    return saved ? "/feed" : "/risk?first=1";
+  }
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,24 +23,28 @@ function LoginInner() {
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Si ya hay sesión activa, salir del login inmediatamente
+  // Si ya hay sesión activa, salir del login inmediatamente al lugar correcto
   useEffect(() => {
     let alive = true;
     (async () => {
       const sess = await getSession();
       if (!alive) return;
-      if (sess) router.replace(next);
+      if (sess) {
+        const paramNext = searchParams.get("next");
+        router.replace(paramNext || decideDefaultNext());
+      }
     })();
     return () => { alive = false; };
-  }, [next, router]);
+  }, [router, searchParams]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setMsg(null);
     setLoading(true);
     try {
-      await login(email, password);   // autentica y persiste sesión (localStorage/cookie)
-      router.replace(next);           // ir al destino solicitado o /feed
+      await login(email, password);
+      const paramNext = searchParams.get("next");
+      router.replace(paramNext || decideDefaultNext());
     } catch (err: unknown) {
       const message =
         (err as { message?: string })?.message ??
@@ -48,7 +58,7 @@ function LoginInner() {
   return (
     <AuthShell
       title="Iniciar sesión"
-      subtitle="Accede para continuar con tu flujo de inversión"
+      subtitle="Accede para continuar"
       footer={
         <div>
           ¿No tienes cuenta?{" "}
@@ -106,7 +116,7 @@ function LoginInner() {
 }
 
 export default function LoginPage() {
-  // Gate de hidratación para evitar SSR≠CSR (porque la sesión vive en localStorage)
+  // Gate de hidratación (sesión en localStorage)
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   if (!ready) return null;

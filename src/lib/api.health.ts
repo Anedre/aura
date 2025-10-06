@@ -1,21 +1,20 @@
-import { apiFetch } from "./core/http";
+// src/lib/api.health.ts
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "").replace(/\/+$/, "");
 
-/** Ping al feed. Si responde (código 2xx), devuelve true; ante 4xx/5xx -> false */
-export async function pingFeed(): Promise<boolean> {
+async function probe(path: string): Promise<boolean> {
+  if (!API_BASE) return false;
+  const url = `${API_BASE}${path}`;
   try {
-    await apiFetch<void>("/v1/feed", { method: "HEAD" });
-    return true;
-  } catch {
-    return false;
-  }
+    const h = await fetch(url, { method: "HEAD", mode: "cors", cache: "no-store" });
+    if (h.ok) return true;
+  } catch {}
+  try {
+    const g = await fetch(url, { method: "GET", mode: "cors", cache: "no-store" });
+    return g.ok;
+  } catch { return false; }
 }
 
-/** Ping a paper-trade health (ideal: endpoint público). Si falla -> false */
-export async function pingPaper(): Promise<boolean> {
-  try {
-    await apiFetch<void>("/v1/paper_trade/health");
-    return true;
-  } catch {
-    return false;
-  }
+export async function checkHealth(): Promise<{ feed: boolean; paper: boolean }> {
+  const [feed, paper] = await Promise.all([probe("/v1/feed"), probe("/v1/paper_trade")]);
+  return { feed, paper };
 }

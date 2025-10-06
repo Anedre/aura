@@ -12,6 +12,9 @@ import {
   type SignInInput,
 } from "aws-amplify/auth";
 
+
+
+
 export type Session = {
   user_id: string;
   email: string;
@@ -107,4 +110,34 @@ export async function getIdToken(): Promise<string | null> {
     const s = await fetchAuthSession();
     return s.tokens?.idToken?.toString() ?? null;
   } catch { return null; }
+}
+
+// 🔽 Añadir al final de src/lib/auth.ts
+
+/** 
+ * Genera el header Authorization con el ID token actual.
+ * Si no hay sesión, devuelve objeto vacío.
+ */
+export async function getAuthHeader(): Promise<Record<string, string>> {
+  try {
+    const token = await getIdToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch {
+    return {};
+  }
+}
+
+/** 
+ * Borra sesión local (alias histórico usado por api.ts).
+ */
+export function clearSessionCache() {
+  clearLocal();
+}
+
+/**
+ * Reenvía código de confirmación de registro (usado por register/page.tsx).
+ */
+export async function resendRegisterCode(email: string) {
+  const { resendSignUpCode } = await import("aws-amplify/auth");
+  return resendSignUpCode({ username: email });
 }

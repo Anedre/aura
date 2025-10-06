@@ -1,16 +1,28 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { getFeed, type FeedItem } from "@/lib/api.feed"; // ⬅️ módulo nuevo
+import { getFeed, type FeedItem } from "@/lib/api.feed";
+import { loadRiskProfile } from "@/lib/invest";
 
 type Horizon = "1d" | "1w";
-type ActionFilter = "ALL" | "BUY" | "SELL" | "ABSTAIN";
-type SortKey = "conf" | "sigma" | "date";
+type ActionFilter = "ALL" | "BUY" | "SELL" | "HOLD" | "ABSTAIN";
+type SortKey = "conf" | "date";
 
 function cn(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
+}
+
+function actionLabel(a: FeedItem["action"]) {
+  if (a === "BUY") return "Sube";
+  if (a === "SELL") return "Baja";
+  if (a === "HOLD") return "En espera";
+  if (a === "ABSTAIN") return "Sin señal clara";
+  return a;
+}
+function horizonLabel(h: Horizon) {
+  return h === "1w" ? "Próximas semanas" : "Próximos días";
 }
 
 function ActionBadge({ action }: { action: FeedItem["action"] }) {
@@ -28,8 +40,9 @@ function ActionBadge({ action }: { action: FeedItem["action"] }) {
         "px-2 py-0.5 rounded-full text-xs font-semibold tracking-wide ring-1 shadow-sm backdrop-blur",
         styles,
       )}
+      title={action}
     >
-      {action}
+      {actionLabel(action)}
     </span>
   );
 }
@@ -38,31 +51,19 @@ function pct(a?: number, b?: number) {
   if (a == null || b == null || b === 0) return null;
   return (a / b - 1) * 100;
 }
-function rrEst(tp?: number, sl?: number, px?: number) {
-  const up = pct(tp, px);
-  const dn = pct(sl, px);
-  if (up == null || dn == null) return null;
-  const risk = Math.abs(dn);
-  return risk > 0 ? up / risk : null;
-}
 
 function Card({ item }: { item: FeedItem }) {
   const confPct = Math.round((item.p_conf ?? 0) * 100);
   const ts = item.ts ? new Date(item.ts) : new Date();
   const safeDate = ts.toLocaleString();
-  const hasStops =
-    !!item.stops && typeof item.stops.tp === "number" && typeof item.stops.sl === "number";
+
+  const hasStops = !!item.stops && typeof item.stops.tp === "number" && typeof item.stops.sl === "number";
   const rTp = pct(item.stops?.tp, item.last_close);
   const rSl = pct(item.stops?.sl, item.last_close);
-  const rr = rrEst(item.stops?.tp, item.stops?.sl, item.last_close);
 
   return (
-    <article
-      className={cn(
-        "rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
-        "shadow-lg shadow-black/30 transition-colors duration-200",
-      )}
-    >
+    <article className={cn("rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
+                           "shadow-lg shadow-black/30 transition-colors duration-200")}>
       <div className="p-5">
         <header className="flex items-start justify-between gap-4">
           <div className="space-y-1">
@@ -78,57 +79,39 @@ function Card({ item }: { item: FeedItem }) {
 
         <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
           <div>
-            <span className="opacity-70">σ: </span>
-            {(item.sigma ?? 0).toFixed(3)}
+            <span className="opacity-70">Periodo: </span>
+            {horizonLabel((item.horizon as Horizon) || "1d")}
           </div>
-          <div>
-            <span className="opacity-70">Horizonte: </span>
-            {item.horizon}
-          </div>
-
-          {item.action === "ABSTAIN" ? (
-            <div className="col-span-2 text-amber-300/90">
-              <span className="opacity-70">Motivo: </span>
-              {item.abstain_reason ??
-                `σ=${(item.sigma ?? 0).toFixed(3)} > ${item.sigma_limit ?? "σ_max"}`}
-            </div>
-          ) : null}
-
           {hasStops ? (
             <>
               <div>
-                <span className="opacity-70">TP: </span>
+                <span className="opacity-70">Meta de ganancia: </span>
                 {item.stops!.tp.toFixed(4)}
                 {rTp != null ? <span className="opacity-60"> ({rTp.toFixed(2)}%)</span> : null}
               </div>
               <div>
-                <span className="opacity-70">SL: </span>
+                <span className="opacity-70">Piso de protección: </span>
                 {item.stops!.sl.toFixed(4)}
                 {rSl != null ? <span className="opacity-60"> ({rSl.toFixed(2)}%)</span> : null}
               </div>
-              {rr != null ? (
-                <div className="col-span-2 text-xs">
-                  <span className="opacity-70">R/R estimado: </span>
-                  <span
-                    className={
-                      rr >= 2
-                        ? "text-emerald-300"
-                        : rr >= 1
-                        ? "text-amber-300"
-                        : "text-rose-300"
-                    }
-                  >
-                    {rr.toFixed(2)}x
-                  </span>
-                </div>
-              ) : null}
             </>
+          ) : (
+            <div className="col-span-2 text-xs opacity-70">
+              Sin metas de ganancia ni piso de protección sugeridos.
+            </div>
+          )}
+
+          {item.action === "ABSTAIN" ? (
+            <div className="col-span-2 text-amber-300/90 text-xs">
+              La señal aún no es clara.
+            </div>
           ) : null}
         </div>
 
+        {/* Nivel de certeza */}
         <div className="mt-4">
           <div className="flex items-center justify-between text-xs mb-1">
-            <span className="opacity-70">Confianza</span>
+            <span className="opacity-70">Nivel de certeza</span>
             <span className="font-medium">{confPct}%</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
@@ -147,8 +130,6 @@ function Card({ item }: { item: FeedItem }) {
             />
           </div>
         </div>
-
-        <footer className="mt-4 text-xs opacity-60">modelo: {item.model_version ?? "—"}</footer>
       </div>
     </article>
   );
@@ -177,16 +158,18 @@ function FeedInner() {
 
   const [data, setData] = useState<FeedItem[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+
   const [horizon, setHorizon] = useState<Horizon>("1d");
-  const [minConf, setMinConf] = useState<number>(0.55);
+  const [minConf, setMinConf] = useState<number>(0.60); // valor amigable por defecto
   const [action, setAction] = useState<ActionFilter>("ALL");
   const [q, setQ] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("conf");
   const [onlyStops, setOnlyStops] = useState(false);
   const [tick, setTick] = useState(0);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  const initDone = useRef(false);
 
-  // init desde URL
+  // 1) Inicializa desde URL (si hay)
   useEffect(() => {
     const h =
       (searchParams.get("h") as Horizon | null) ??
@@ -203,30 +186,49 @@ function FeedInner() {
     if (s) setSort(s);
     if (qq) setQ(qq);
     if (os) setOnlyStops(os === "1");
+    // no marcamos initDone aquí: dejamos que el próximo effect decida defaults si no había URL
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // escribe filtros a URL
+  // 2) Si NO había parámetros en la URL, aplica defaults según perfil
+  useEffect(() => {
+    if (initDone.current) return;
+    const noParams =
+      !searchParams.get("h") &&
+      !searchParams.get("horizon") &&
+      !searchParams.get("m") &&
+      !searchParams.get("min_conf");
+    if (!noParams) { initDone.current = true; return; }
+
+    const prof = loadRiskProfile()?.profile;
+    if (prof === "Conservador") { setHorizon("1d"); setMinConf(0.65); }
+    else if (prof === "Agresivo") { setHorizon("1w"); setMinConf(0.55); }
+    else { setHorizon("1d"); setMinConf(0.60); } // Moderado/por defecto
+
+    initDone.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Escribe filtros a URL
   useEffect(() => {
     const qsp = new URLSearchParams(searchParams);
     qsp.set("h", horizon);
     qsp.set("m", String(Math.round(minConf * 100)));
     qsp.set("a", action);
     qsp.set("s", sort);
-    if (q) qsp.set("q", q);
-    else qsp.delete("q");
+    if (q) qsp.set("q", q); else qsp.delete("q");
     qsp.set("stops", onlyStops ? "1" : "0");
     router.replace(`${pathname}?${qsp.toString()}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [horizon, minConf, action, sort, q, onlyStops]);
 
-  // auto-refresh
+  // Auto-refresh
   useEffect(() => {
     const id = setInterval(() => setTick((t) => t + 1), 90_000);
     return () => clearInterval(id);
   }, []);
 
-  // fetch + fallback 1w->1d si viene vacío
+  // Fetch feed
   useEffect(() => {
     setData(null);
     setErr(null);
@@ -236,10 +238,6 @@ function FeedInner() {
     qs.set("min_conf", String(minConf)); // 0..1
     getFeed(qs)
       .then((d) => {
-        if (horizon === "1w" && Array.isArray(d) && d.length === 0) {
-          setHorizon("1d");
-          return;
-        }
         setData(d);
         setUpdatedAt(new Date());
       })
@@ -259,7 +257,6 @@ function FeedInner() {
     });
     const sorted = [...f].sort((a, b) => {
       if (sort === "conf") return (b.p_conf ?? 0) - (a.p_conf ?? 0);
-      if (sort === "sigma") return (a.sigma ?? 0) - (b.sigma ?? 0);
       if (sort === "date")
         return new Date(b.ts ?? 0).getTime() - new Date(a.ts ?? 0).getTime();
       return 0;
@@ -277,27 +274,16 @@ function FeedInner() {
   function exportCSV() {
     const rows = filtered.map((d) => ({
       symbol: d.symbol,
-      action: d.action,
-      p_conf: d.p_conf,
-      sigma: d.sigma,
-      horizon: d.horizon,
-      ts: d.ts,
-      last_close: d.last_close ?? "",
-      tp: d.stops?.tp ?? "",
-      sl: d.stops?.sl ?? "",
-      model_version: d.model_version ?? "",
+      accion: actionLabel(d.action),
+      certeza: Math.round((d.p_conf ?? 0) * 100),
+      periodo: horizonLabel((d.horizon as Horizon) || "1d"),
+      fecha: d.ts ?? "",
+      precio: d.last_close ?? "",
+      meta_ganancia: d.stops?.tp ?? "",
+      piso_proteccion: d.stops?.sl ?? "",
     }));
     const headers = [
-      "symbol",
-      "action",
-      "p_conf",
-      "sigma",
-      "horizon",
-      "ts",
-      "last_close",
-      "tp",
-      "sl",
-      "model_version",
+      "symbol","accion","certeza","periodo","fecha","precio","meta_ganancia","piso_proteccion",
     ] as const;
 
     const csv = [
@@ -319,7 +305,7 @@ function FeedInner() {
       <main className="min-h-dvh bg-background text-foreground">
         <div className="max-w-4xl mx-auto p-6">
           <div className="p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-200">
-            <div className="font-semibold mb-1">Error consultando el feed</div>
+            <div className="font-semibold mb-1">No pudimos cargar tus ideas</div>
             <div className="text-sm opacity-90">{err}</div>
           </div>
         </div>
@@ -331,29 +317,29 @@ function FeedInner() {
     <main className="min-h-dvh bg-background text-foreground">
       <div className="max-w-5xl mx-auto p-6 space-y-6">
         <header className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Feed de Recomendaciones</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Recomendaciones para ti</h1>
           <p className="text-sm opacity-70">
-            Señales con confianza calibrada e incertidumbre (AURA CNN–LSTM).
+            Ideas simples según tu perfil. Sin jerga, con metas claras.
           </p>
         </header>
 
-        {/* FILTROS */}
+        {/* FILTROS (claros) */}
         <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-sm opacity-80">Horizonte</label>
+            <label className="text-sm opacity-80">Periodo</label>
             <select
               value={horizon}
               onChange={(e) => setHorizon(e.target.value as Horizon)}
               className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm"
             >
-              <option value="1d">1d</option>
-              <option value="1w">1w</option>
+              <option value="1d">Próximos días</option>
+              <option value="1w">Próximas semanas</option>
             </select>
           </div>
 
           <div className="flex-1 min-w-56">
             <label className="flex items-center justify-between text-sm opacity-80">
-              <span>Confianza mínima</span>
+              <span>Nivel de certeza mínimo</span>
               <span className="font-medium">{Math.round(minConf * 100)}%</span>
             </label>
             <input
@@ -367,9 +353,9 @@ function FeedInner() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm opacity-80">Acción</span>
+            <span className="text-sm opacity-80">Tipo</span>
             <div className="flex rounded-lg border border-white/10 overflow-hidden">
-              {(["ALL", "BUY", "SELL", "ABSTAIN"] as ActionFilter[]).map((a) => (
+              {(["ALL", "BUY", "SELL", "HOLD", "ABSTAIN"] as ActionFilter[]).map((a) => (
                 <button
                   key={a}
                   onClick={() => setAction(a)}
@@ -377,23 +363,23 @@ function FeedInner() {
                     "px-2 py-1 text-xs border-r border-white/10 last:border-r-0",
                     a === action ? "bg-white/15" : "bg-white/5 hover:bg-white/10",
                   )}
+                  title={a}
                 >
-                  {a}
+                  {a === "ALL" ? "Todas" : actionLabel(a)}
                 </button>
               ))}
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm opacity-80">Orden</span>
+            <span className="text-sm opacity-80">Ordenar por</span>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm"
             >
-              <option value="conf">Confianza ↓</option>
-              <option value="sigma">σ (menor primero)</option>
-              <option value="date">Recientes</option>
+              <option value="conf">Mayor certeza</option>
+              <option value="date">Más recientes</option>
             </select>
           </div>
 
@@ -404,7 +390,7 @@ function FeedInner() {
               checked={onlyStops}
               onChange={(e) => setOnlyStops(e.target.checked)}
             />
-            solo con TP/SL
+            mostrar solo con protecciones
           </label>
 
           <div className="flex items-center gap-2">
@@ -419,17 +405,16 @@ function FeedInner() {
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => {
-                setHorizon("1d");
-                setMinConf(0.55);
-                setAction("ALL");
-                setOnlyStops(false);
-                setQ("");
-                setSort("conf");
+                const prof = loadRiskProfile()?.profile;
+                if (prof === "Conservador") { setHorizon("1d"); setMinConf(0.65); }
+                else if (prof === "Agresivo") { setHorizon("1w"); setMinConf(0.55); }
+                else { setHorizon("1d"); setMinConf(0.60); }
+                setAction("ALL"); setOnlyStops(false); setQ(""); setSort("conf");
               }}
               className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-sm"
-              title="Volver a los valores por defecto"
+              title="Volver a los valores de tu perfil"
             >
-              Reset filtros
+              Usar mi perfil
             </button>
 
             <button
@@ -452,17 +437,20 @@ function FeedInner() {
         {/* CONTADORES */}
         <section className="flex flex-wrap gap-3 text-xs items-center">
           <span className="px-2 py-0.5 rounded-full ring-1 ring-emerald-500/30 bg-emerald-500/10 text-emerald-300">
-            BUY: {counts.BUY}
+            Sube: {counts.BUY}
           </span>
           <span className="px-2 py-0.5 rounded-full ring-1 ring-rose-500/30 bg-rose-500/10 text-rose-300">
-            SELL: {counts.SELL}
+            Baja: {counts.SELL}
+          </span>
+          <span className="px-2 py-0.5 rounded-full ring-1 ring-slate-500/30 bg-slate-500/10 text-slate-300">
+            En espera: {counts.HOLD}
           </span>
           <span className="px-2 py-0.5 rounded-full ring-1 ring-amber-500/30 bg-amber-500/10 text-amber-300">
-            ABSTAIN: {counts.ABSTAIN}
+            Sin señal clara: {counts.ABSTAIN}
           </span>
 
           <span className="ml-2 opacity-70">
-            Total bruto: {Array.isArray(data) ? data.length : 0} • Tras filtros: {filtered.length}
+            Mostrando: {filtered.length} de {Array.isArray(data) ? data.length : 0}
           </span>
 
           {updatedAt ? (
@@ -485,11 +473,7 @@ function FeedInner() {
           ) : (
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
               <div className="text-sm opacity-80 mb-2">
-                No hay señales con confianza ≥ {Math.round(minConf * 100)}%{" "}
-                {onlyStops ? "y con TP/SL" : ""}.
-                {Array.isArray(data) && data.length > 0 ? (
-                  <> Hay {data.length} señal(es) brutas disponibles.</>
-                ) : null}
+                No hay ideas con el nivel de certeza elegido.
               </div>
               <div className="flex gap-2">
                 <button
@@ -502,7 +486,7 @@ function FeedInner() {
                   onClick={() => setMinConf(0)}
                   className="px-3 py-1 rounded-lg bg-emerald-600/80 hover:bg-emerald-600 text-white text-sm"
                 >
-                  Mostrar todo
+                  Ver todo
                 </button>
               </div>
             </div>
@@ -520,7 +504,7 @@ export default function FeedPage() {
         <main className="min-h-dvh bg-background text-foreground">
           <div className="max-w-5xl mx-auto p-6 space-y-6">
             <header className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight">Feed de Recomendaciones</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Recomendaciones para ti</h1>
               <p className="text-sm opacity-70">Cargando…</p>
             </header>
             <section className="grid gap-4">

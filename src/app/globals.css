@@ -12,6 +12,40 @@
   --muted:   #0F1318;
   --card:    #0E1217;
   --border:  #1F2937;
+  /* ===== UX extras: chips, toolbar, cards más “vivas” ===== */
+
+.chip {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .75rem; line-height: 1; padding: .35rem .6rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, white 8%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+}
+.chip--green { background: color-mix(in oklab, var(--success) 18%, transparent); color: #e8ffef; border-color: color-mix(in oklab, var(--success) 35%, transparent); }
+.chip--red   { background: color-mix(in oklab, var(--danger) 18%, transparent);  color: #ffecec; border-color: color-mix(in oklab, var(--danger) 35%, transparent); }
+
+.toolbar {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .4rem .6rem; border-radius: .8rem;
+  background: color-mix(in oklab, white 6%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+}
+
+.card { backdrop-filter: blur(6px); }
+
+/* Tema day: sube contraste de elementos sutiles */
+:root[data-theme="day"] .chip {
+  background: color-mix(in oklab, black 6%, transparent);
+  border-color: color-mix(in oklab, black 14%, transparent);
+}
+:root[data-theme="day"] .toolbar {
+  background: color-mix(in oklab, black 5%, transparent);
+  border-color: color-mix(in oklab, black 12%, transparent);
+}
+
+/* Slider más visible */
+input[type="range"] { accent-color: var(--accent); }
+
   --ring:    #7C3AED80;
 
   --success: #22C55E;
@@ -147,3 +181,37 @@ body {
 .aura-orb--accent {
   background: radial-gradient(closest-side, color-mix(in oklab, var(--accent) 35%, transparent), transparent);
 }
+
+/* ===== UX extras: chips, toolbar, cards más “vivas” ===== */
+
+.chip {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-size: .75rem; line-height: 1; padding: .35rem .6rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, white 8%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+}
+.chip--green { background: color-mix(in oklab, var(--success) 18%, transparent); color: #e8ffef; border-color: color-mix(in oklab, var(--success) 35%, transparent); }
+.chip--red   { background: color-mix(in oklab, var(--danger) 18%, transparent);  color: #ffecec; border-color: color-mix(in oklab, var(--danger) 35%, transparent); }
+
+.toolbar {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .4rem .6rem; border-radius: .8rem;
+  background: color-mix(in oklab, white 6%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+}
+
+.card { backdrop-filter: blur(6px); }
+
+/* Tema day: sube contraste de elementos sutiles */
+:root[data-theme="day"] .chip {
+  background: color-mix(in oklab, black 6%, transparent);
+  border-color: color-mix(in oklab, black 14%, transparent);
+}
+:root[data-theme="day"] .toolbar {
+  background: color-mix(in oklab, black 5%, transparent);
+  border-color: color-mix(in oklab, black 12%, transparent);
+}
+
+/* Slider más visible */
+input[type="range"] { accent-color: var(--accent); }
