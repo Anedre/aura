@@ -11,6 +11,9 @@
   "dependencies": {
     "@aws-amplify/auth": "^6.16.0",
     "aws-amplify": "^6.15.7",
+    "echarts": "^5.6.0",
+    "echarts-for-react": "^3.0.2",
+    "lightweight-charts": "^5.0.9",
     "next": "15.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
