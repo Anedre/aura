@@ -5,7 +5,9 @@ import { notFound } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 const MarketChartE = dynamic(() => import('@/components/MarketChartE'), { ssr: false });
+import PriceTicker from "@/components/PriceTicker";
 /* ================= Tipos para posiciones (modo demo) ================= */
+import type { RangeBtn } from "@/components/MarketChartE"; // <-- agrega este type-only import
 
 type PositionSide = "LONG" | "SHORT";
 type Position = {
@@ -218,8 +220,8 @@ export default function AssetPage({ params }: { params: { symbol?: string } }) {
 
   const [last, setLast] = useState<number | null>(null);
 
-    const [rangeDelta, setRangeDelta] = useState<number | null>(null);
-  const [rangeLabel, setRangeLabel] = useState<'1D'|'1W'|'1M'|'1Y'|'ALL'>('ALL');
+  const [rangeDelta, setRangeDelta] = useState<number | null>(null);
+  const [rangeLabel, setRangeLabel] = useState<RangeBtn>('MAX');
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
@@ -244,6 +246,10 @@ export default function AssetPage({ params }: { params: { symbol?: string } }) {
           </div>
         </header>
 
+        <div className="mb-2">
+          <PriceTicker price={last} deltaPct={rangeDelta ?? null} />
+        </div>
+
 
         {/* grid de 2 columnas: chart flexible + panel de ancho fijo */}
         <section className="gap-6 grid
@@ -254,13 +260,10 @@ export default function AssetPage({ params }: { params: { symbol?: string } }) {
               symbol={symbol}
               provider="yahoo"
               tf="5m"
-              emaDurationsMin={[20, 60]}
               height={440}
               onPrice={setLast}
               baseline={null}
               showLastPrice
-              showGaps
-              useLiveMarketRange="max"  
               onRangeDelta={(d, r) => { setRangeDelta(d); setRangeLabel(r); }}  
             />
           </div>

@@ -1,68 +1,39 @@
 @import "tailwindcss";
 
-/* ======== TEMA POR DEFECTO: NIGHT (AURA) ======== */
+/* ======== Night Theme (default) ======== */
 :root {
-  /* Night tokens (actuales) */
   --background: #0B0D12;
   --foreground: #EAF0F6;
 
-  --primary:   #6366F1; /* Indigo AURA */
-  --accent:    #10B981; /* Emerald AURA */
+  --primary:   #6366F1; /* Indigo */
+  --accent:    #10B981; /* Emerald */
 
   --muted:   #0F1318;
   --card:    #0E1217;
   --border:  #1F2937;
-  /* ===== UX extras: chips, toolbar, cards más “vivas” ===== */
 
-.chip {
-  display: inline-flex; align-items: center; gap: .4rem;
-  font-size: .75rem; line-height: 1; padding: .35rem .6rem;
-  border-radius: 9999px;
-  background: color-mix(in oklab, white 8%, transparent);
-  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-}
-.chip--green { background: color-mix(in oklab, var(--success) 18%, transparent); color: #e8ffef; border-color: color-mix(in oklab, var(--success) 35%, transparent); }
-.chip--red   { background: color-mix(in oklab, var(--danger) 18%, transparent);  color: #ffecec; border-color: color-mix(in oklab, var(--danger) 35%, transparent); }
-
-.toolbar {
-  display: inline-flex; align-items: center; gap: .5rem;
-  padding: .4rem .6rem; border-radius: .8rem;
-  background: color-mix(in oklab, white 6%, transparent);
-  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-}
-
-.card { backdrop-filter: blur(6px); }
-
-/* Tema day: sube contraste de elementos sutiles */
-:root[data-theme="day"] .chip {
-  background: color-mix(in oklab, black 6%, transparent);
-  border-color: color-mix(in oklab, black 14%, transparent);
-}
-:root[data-theme="day"] .toolbar {
-  background: color-mix(in oklab, black 5%, transparent);
-  border-color: color-mix(in oklab, black 12%, transparent);
-}
-
-/* Slider más visible */
-input[type="range"] { accent-color: var(--accent); }
+  /* Chart defaults (night) */
+  --chart-label: rgba(234, 240, 246, 0.72);
+  --chart-axis: rgba(234, 240, 246, 0.24);
+  --chart-grid: rgba(234, 240, 246, 0.08);
+  --chart-tooltip-bg: rgba(20, 20, 24, 0.94);
+  --chart-tooltip-fg: rgba(255, 255, 255, 0.92);
 
   --ring:    #7C3AED80;
-
   --success: #22C55E;
   --warning: #F59E0B;
   --danger:  #EF4444;
 
-  /* Duraciones/transiciones base */
   --aura-transition: 220ms;
 }
 
-/* ======== TEMA DAY (claro) ======== */
+/* ======== Day Theme ======== */
 :root[data-theme="day"] {
   --background: #F7F8FB;
   --foreground: #0B1220;
 
-  --primary:   #4F46E5; /* Indigo más sobrio para claro */
-  --accent:    #059669; /* Emerald un punto más oscuro */
+  --primary:   #4F46E5;
+  --accent:    #059669;
 
   --muted:   #FFFFFF;
   --card:    #FFFFFF;
@@ -72,9 +43,16 @@ input[type="range"] { accent-color: var(--accent); }
   --success: #16A34A;
   --warning: #D97706;
   --danger:  #DC2626;
+
+  /* Chart overrides (day) */
+  --chart-label: rgba(11, 18, 32, 0.70);
+  --chart-axis: rgba(11, 18, 32, 0.30);
+  --chart-grid: rgba(11, 18, 32, 0.10);
+  --chart-tooltip-bg: rgba(255, 255, 255, 0.96);
+  --chart-tooltip-fg: rgba(11, 18, 32, 0.95);
 }
 
-/* Tailwind v4 tokens (inline theme) */
+/* Tailwind v4 tokens */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -89,10 +67,9 @@ input[type="range"] { accent-color: var(--accent); }
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas;
 }
 
-/* Respetar preferencia del SO cuando no hay preferencia guardada */
+/* Respect OS preference when unset */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
-    /* Si el usuario nunca eligió, pero su SO es claro, usamos day */
     --background: #F7F8FB;
     --foreground: #0B1220;
     --primary:   #4F46E5;
@@ -107,7 +84,7 @@ input[type="range"] { accent-color: var(--accent); }
   }
 }
 
-/* Fondo con radiales AURA */
+/* Background with AURA radials */
 body {
   background:
     radial-gradient(1200px 500px at 50% -100px, color-mix(in oklab, var(--primary) 20%, transparent), transparent 60%),
@@ -115,33 +92,20 @@ body {
     var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-
-  /* Transición suave al cambiar tema */
-  transition:
-    background-color var(--aura-transition) ease,
-    color var(--aura-transition) ease,
-    background var(--aura-transition) ease;
+  transition: background-color var(--aura-transition) ease, color var(--aura-transition) ease, background var(--aura-transition) ease;
 }
 
-/* ======== PRIMITIVAS DE UI ======== */
-.card {
-  @apply rounded-2xl border shadow;
-  background: color-mix(in oklab, var(--card) 96%, transparent);
-  border-color: color-mix(in oklab, var(--border) 75%, transparent);
-  box-shadow: 0 10px 30px color-mix(in oklab, black 70%, transparent);
-  transition: background-color var(--aura-transition) ease, border-color var(--aura-transition) ease, color var(--aura-transition) ease;
-}
+/* ===== UI Primitives ===== */
+.card { @apply rounded-2xl border shadow; backdrop-filter: blur(6px); transition: background-color var(--aura-transition) ease, border-color var(--aura-transition) ease, color var(--aura-transition) ease; }
 
 .input {
   @apply w-full rounded-xl px-3 py-2 outline-none transition;
   background: color-mix(in oklab, white 5%, transparent);
   border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  color: var(--foreground);
 }
-.input:focus {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-  background: color-mix(in oklab, white 7%, transparent);
-}
+.input:focus { outline: 2px solid var(--ring); outline-offset: 2px; background: color-mix(in oklab, white 7%, transparent); }
+.input::placeholder { color: color-mix(in oklab, var(--foreground) 60%, transparent); opacity: .7; }
 
 .btn {
   @apply inline-flex items-center justify-center rounded-xl px-3 py-2 transition select-none;
@@ -150,68 +114,61 @@ body {
 }
 .btn:hover { background: color-mix(in oklab, white 10%, transparent); }
 
-.btn-primary {
-  @apply text-white border-none;
-  background: var(--primary);
-}
-:root[data-theme="day"] .btn-primary {
-  @apply text-white;
-  background: var(--primary); /* mantiene contraste AA en claro */
-}
+.btn-primary { @apply text-white border-none; background: var(--primary); }
+:root[data-theme="day"] .btn-primary { @apply text-white; background: var(--primary); }
 .btn-primary:hover { filter: brightness(1.05); }
 
-.btn-ghost {
-  background: color-mix(in oklab, white 6%, transparent);
-}
-.btn-ghost:hover { background: color-mix(in oklab, white 10%, transparent); }
+.btn-danger { @apply text-white border-none; background: var(--danger); }
+.btn-danger:hover { filter: brightness(1.05); }
 
-.link {
-  @apply underline underline-offset-4 decoration-1;
-}
+.btn-ghost { background: color-mix(in oklab, white 6%, transparent); }
+.btn-ghost:hover { background: color-mix(in oklab, white 10%, transparent); }
+:root[data-theme="day"] .btn-ghost { background: color-mix(in oklab, black 6%, transparent); }
+:root[data-theme="day"] .btn-ghost:hover { background: color-mix(in oklab, black 12%, transparent); }
+
+.link { @apply underline underline-offset-4 decoration-1; }
 .link:hover { text-decoration-thickness: 2px; }
 
-/* Orbes de marca */
-.aura-orb {
-  position: absolute; inset: auto;
-  width: 28rem; height: 28rem; border-radius: 9999px; filter: blur(64px);
-  background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 35%, transparent), transparent);
-  opacity: .35; pointer-events: none;
-  transition: background var(--aura-transition) ease, opacity var(--aura-transition) ease;
-}
-.aura-orb--accent {
-  background: radial-gradient(closest-side, color-mix(in oklab, var(--accent) 35%, transparent), transparent);
-}
+/* Orbs */
+.aura-orb { position: absolute; inset: auto; width: 28rem; height: 28rem; border-radius: 9999px; filter: blur(64px); background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 35%, transparent), transparent); opacity: .35; pointer-events: none; transition: background var(--aura-transition) ease, opacity var(--aura-transition) ease; }
+.aura-orb--accent { background: radial-gradient(closest-side, color-mix(in oklab, var(--accent) 35%, transparent), transparent); }
 
-/* ===== UX extras: chips, toolbar, cards más “vivas” ===== */
-
-.chip {
-  display: inline-flex; align-items: center; gap: .4rem;
-  font-size: .75rem; line-height: 1; padding: .35rem .6rem;
-  border-radius: 9999px;
-  background: color-mix(in oklab, white 8%, transparent);
-  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-}
+/* Chips & Toolbar */
+.chip { display: inline-flex; align-items: center; gap: .4rem; font-size: .75rem; line-height: 1; padding: .35rem .6rem; border-radius: 9999px; background: color-mix(in oklab, white 8%, transparent); border: 1px solid color-mix(in oklab, var(--border) 60%, transparent); }
 .chip--green { background: color-mix(in oklab, var(--success) 18%, transparent); color: #e8ffef; border-color: color-mix(in oklab, var(--success) 35%, transparent); }
 .chip--red   { background: color-mix(in oklab, var(--danger) 18%, transparent);  color: #ffecec; border-color: color-mix(in oklab, var(--danger) 35%, transparent); }
+:root[data-theme="day"] .chip { background: color-mix(in oklab, black 6%, transparent); border-color: color-mix(in oklab, black 14%, transparent); }
+:root[data-theme="day"] .chip--green { color: #065F46; background: color-mix(in oklab, var(--success) 10%, transparent); border-color: color-mix(in oklab, var(--success) 35%, transparent); }
+:root[data-theme="day"] .chip--red   { color: #7F1D1D; background: color-mix(in oklab, var(--danger) 10%, transparent);  border-color: color-mix(in oklab, var(--danger) 35%, transparent); }
 
-.toolbar {
-  display: inline-flex; align-items: center; gap: .5rem;
-  padding: .4rem .6rem; border-radius: .8rem;
-  background: color-mix(in oklab, white 6%, transparent);
-  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-}
+.toolbar { display: inline-flex; align-items: center; gap: .5rem; padding: .4rem .6rem; border-radius: .8rem; background: color-mix(in oklab, white 6%, transparent); border: 1px solid color-mix(in oklab, var(--border) 60%, transparent); }
+:root[data-theme="day"] .toolbar { background: color-mix(in oklab, black 5%, transparent); border-color: color-mix(in oklab, black 12%, transparent); }
 
-.card { backdrop-filter: blur(6px); }
-
-/* Tema day: sube contraste de elementos sutiles */
-:root[data-theme="day"] .chip {
-  background: color-mix(in oklab, black 6%, transparent);
-  border-color: color-mix(in oklab, black 14%, transparent);
-}
-:root[data-theme="day"] .toolbar {
-  background: color-mix(in oklab, black 5%, transparent);
-  border-color: color-mix(in oklab, black 12%, transparent);
-}
-
-/* Slider más visible */
+/* Slider accent */
 input[type="range"] { accent-color: var(--accent); }
+
+/* Price flash */
+.price-flash-up { animation: auraFlashUp 550ms ease; }
+.price-flash-down { animation: auraFlashDown 550ms ease; }
+@keyframes auraFlashUp { 0% { background: color-mix(in oklab, var(--success) 22%, transparent); } 100% { background: transparent; } }
+@keyframes auraFlashDown { 0% { background: color-mix(in oklab, var(--danger) 22%, transparent); } 100% { background: transparent; } }
+
+/* Tooltips */
+.tooltip { position: relative; display: inline-block; }
+.tooltip .tooltip-panel { position: absolute; z-index: 40; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-2px); padding: .6rem .7rem; min-width: 220px; border-radius: .8rem; background: color-mix(in oklab, var(--card) 96%, transparent); border: 1px solid color-mix(in oklab, var(--border) 75%, transparent); box-shadow: 0 10px 30px color-mix(in oklab, black 70%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--aura-transition) ease, transform var(--aura-transition) ease; }
+.tooltip:hover .tooltip-panel, .tooltip:focus-within .tooltip-panel { opacity: 1; pointer-events: auto; transform: translateX(-50%) translateY(0); }
+.tooltip .tooltip-panel::after { content: ""; position: absolute; top: -6px; left: 50%; transform: translateX(-50%); border-left: 6px solid transparent; border-right: 6px solid transparent; border-bottom: 6px solid color-mix(in oklab, var(--card) 96%, transparent); }
+.tooltip-title { font-weight: 600; margin-bottom: .25rem; font-size: .8rem; }
+.tooltip-text { font-size: .75rem; opacity: .85; }
+.tooltip-panel--danger { border-color: color-mix(in oklab, var(--danger) 65%, var(--border)); }
+
+/* Day overrides for Tailwind utility backgrounds used in toolbars */
+:root[data-theme="day"] .bg-white\/5  { background-color: color-mix(in oklab, black 5%, transparent) !important; }
+:root[data-theme="day"] .bg-white\/10 { background-color: color-mix(in oklab, black 10%, transparent) !important; }
+
+/* Smooth progress width transitions */
+.progress-smooth { transition: width var(--aura-transition) ease; }
+
+/* Simple entry animation */
+@keyframes auraFadeInUp { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
+.fade-in-up { animation: auraFadeInUp 320ms ease both; }

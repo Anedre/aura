@@ -66,9 +66,12 @@ export function useLiveMarket(opts: UseLiveMarketOptions): LiveMarketState {
         const r = await fetch(url, { cache: 'no-store' });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
 
-        const data = (await r.json()) as Candle[];
+        const j = await r.json();
+        const arr: Candle[] = Array.isArray(j)
+          ? (j as Candle[])
+          : (Array.isArray((j as { candles?: unknown }).candles) ? ((j as { candles: Candle[] }).candles) : []);
         if (!alive) return;
-        setCandles(Array.isArray(data) ? data : []);
+        setCandles(arr);
       } catch (e) {
         if (!alive) return;
         setError(e instanceof Error ? e.message : 'Error desconocido');

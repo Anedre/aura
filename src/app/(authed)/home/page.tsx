@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { loadRiskProfile } from "@/lib/invest";
 import MarketChartE from "@/components/MarketChartE";
+import PriceTicker from "@/components/PriceTicker";
+// import type { RangeBtn } from "@/components/MarketChartE"; 
 
 // Si prefieres reutilizar fetchJSON desde lib/market, puedes importarlo:
 // import { fetchJSON } from "@/lib/market";
@@ -54,7 +56,7 @@ function parseStops(x: unknown): { tp: number; sl: number } | null {
 }
 async function getFeed(h: Horizon, minConf: number): Promise<FeedItem[]> {
   if (!API_BASE) return [];
-  const qs = new URLSearchParams({ horizon: h, min_conf: String(minConf) });
+  const qs = new URLSearchParams({ horizon: h, min_conf: String(minConf), limit: "200" });
   const data = await fetchJSON<unknown>(`${API_BASE}/v1/feed?${qs.toString()}`);
   if (!Array.isArray(data)) return [];
   return data
@@ -82,7 +84,7 @@ export default function HomePage() {
   const defaults = useMemo(() => {
     const p = loadRiskProfile()?.profile;
     if (p === "Conservador") return { horizon: "1d" as Horizon, minConf: 0.65 };
-    if (p === "Agresivo")   return { horizon: "1w" as Horizon, minConf: 0.55 };
+    if (p === "Agresivo")   return { horizon: "1d" as Horizon, minConf: 0.55 };
     return { horizon: "1d" as Horizon, minConf: 0.60 };
   }, []);
 
@@ -93,11 +95,10 @@ export default function HomePage() {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [pinned, setPinned] = useState<string[]>([]);
   const [focus, setFocus] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState<boolean>(true);
 
     // estados para el indicador
   const [rangeDelta, setRangeDelta] = useState<number | null>(null);
-  const [rangeLabel, setRangeLabel] = useState<'1D'|'1W'|'1M'|'1Y'|'ALL'>('ALL');
-    // en el header de la tarjeta
 
 
   // carga/refresh del feed
@@ -134,8 +135,19 @@ export default function HomePage() {
     if (!feed || !focus) return null;
     return feed.find((x) => x.symbol === focus) ?? null;
   }, [feed, focus]);
+  const [lastPrice, setLastPrice] = useState<number | null>(null);
 
-  // Deriva el símbolo desde tu selección actual (ajusta a tu estado real)
+  const projection = useMemo<number | null>(() => {
+    const base = (lastPrice ?? current?.last_close ?? null);
+    if (!current || base == null || !Number.isFinite(base)) return null;
+    const tp = current.stops && typeof current.stops.tp === 'number' ? current.stops.tp : null;
+    if (tp != null && Number.isFinite(tp)) return tp;
+    const conf = Math.max(0, Math.min(1, current.p_conf ?? 0.6));
+    const sign = current.action === 'SELL' ? -1 : current.action === 'BUY' ? 1 : 0;
+    if (sign === 0) return null;
+    const step = 0.01 * conf;
+    return base * (1 + sign * step);
+  }, [current, lastPrice]);  // Deriva el símbolo desde tu selección actual (ajusta a tu estado real)
   const assetSymbol = useMemo<string | null>(() => {
     // casos típicos: current?.symbol viene de tu store/selección;
     // focus podría venir del search o url.
@@ -156,7 +168,7 @@ export default function HomePage() {
         <header className="flex flex-wrap items-center gap-4 justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Para ti</h1>
-            <p className="text-sm opacity-70">Recomendaciones sencillas según tu perfil.</p>
+            <p className="text-sm opacity-70">Las mejores recomendaciones, ordenadas para tu perfil.</p>
           </div>
           <div className="flex items-center gap-2">
             <select
@@ -165,7 +177,7 @@ export default function HomePage() {
               className="toolbar"
               title="Periodo"
             >
-              <option value="1d">Próximos días</option>
+              <option value="1d">Próximo cierre (1 día)</option>
               <option value="1w">Próximas semanas</option>
             </select>
 
@@ -173,36 +185,67 @@ export default function HomePage() {
               <label className="text-xs opacity-80 mr-2">Certeza mínima</label>
               <input
                 type="range"
-                min={55}
+                min={10}
                 max={80}
                 value={Math.round(minConf * 100)}
                 onChange={(e) => setMinConf(Number(e.target.value) / 100)}
               />
               <span className="ml-2 text-xs font-medium">{Math.round(minConf * 100)}%</span>
             </div>
+            {showHelp && (
+              <div className="card p-4">
+                <div className="text-sm opacity-80 mb-1">¿Qué hago ahora?</div>
+                <ul className="text-xs opacity-80 list-disc pl-4 space-y-1">
+                  <li>“Probar inversión” te deja jugar con montos y tiempo.</li>
+                  <li>“Enviar solicitud” pide una predicción diaria personalizada.</li>
+                  <li>“Mi perfil” guarda tus preferencias para ajustar la vista.</li>
+                </ul>
+              </div>
+            )}
+
+            <button
+              className={`btn ${showHelp ? 'btn-primary' : ''}`}
+              onClick={() => setShowHelp(v => !v)}
+              title="Mostrar/ocultar explicaciones"
+            >
+              {showHelp ? 'Modo explicado: ON' : 'Modo explicado: OFF'}
+            </button>
 
             <button className="btn" onClick={() => router.push("/feed")}>Ver todo</button>
           </div>
         </header>
+
+        {showHelp && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-sm">
+            <div className="font-semibold mb-1">Cómo usar esta pantalla</div>
+            <div className="grid sm:grid-cols-3 gap-3">
+              <div className="rounded-lg border border-white/10 p-2">
+                <div className="text-xs opacity-70 mb-1">Paso 1</div>
+                Elige un activo de la lista. Verás una señal (sube/baja/espera) y su certeza.
+              </div>
+              <div className="rounded-lg border border-white/10 p-2">
+                <div className="text-xs opacity-70 mb-1">Paso 2</div>
+                Mira el gráfico y el precio en vivo. Si te interesa, fíjalo para tenerlo a mano.
+              </div>
+              <div className="rounded-lg border border-white/10 p-2">
+                <div className="text-xs opacity-70 mb-1">Paso 3</div>
+                Prueba la idea en el simulador o pide una predicción para el próximo cierre.
+              </div>
+            </div>
+          </div>
+        )}
 
         <section className="grid lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2">
             <div className="card p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
-                  <div className="text-2xl font-semibold">{assetSymbol ?? '—'}</div>
+                  <div className="text-2xl font-semibold">{assetSymbol ?? "-"}</div>
+                  <PriceTicker price={lastPrice} deltaPct={rangeDelta ?? null} className="ml-2" updateEveryMs={3000} />
                   {current && <span className="chip">{actionLabel(current.action)}</span>}
                   {confPct != null && <span className="chip">{confPct}% certeza</span>}
                   {current?.horizon && (
                     <span className="chip">{horizonLabel((current.horizon as Horizon) || "1d")}</span>
-                  )}
-                  {rangeDelta != null && (
-                    <span
-                      className={`chip ${rangeDelta >= 0 ? 'text-emerald-300 bg-emerald-500/10' : 'text-rose-300 bg-rose-500/10'}`}
-                      title="Variación acumulada en el rango visible"
-                    >
-                      {rangeDelta >= 0 ? '▲' : '▼'} {Math.abs(rangeDelta).toFixed(2)}% ({rangeLabel})
-                    </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -216,20 +259,33 @@ export default function HomePage() {
                   )}
                 </div>
               </div>
+              {showHelp && (
+                <div className="mb-3 text-xs opacity-80">
+                  ¿Qué significa? “Sube/Baja” describe la dirección más probable para el próximo cierre. La certeza es una estimación.
+                </div>
+              )}
 
               {/* === Gráfico en tiempo real reutilizable === */}
              {assetSymbol ? (
+                <>
                 <MarketChartE
                   symbol={assetSymbol}
                   provider="yahoo"
                   tf="5m"
-                  emaDurationsMin={[20, 60]}
                   height={440}
-                  showGaps
+                  baseline={projection ?? null}
                   showLastPrice
-                  onRangeDelta={(d, r) => { setRangeDelta(d); setRangeLabel(r); }}
+                  wsPriceProvider="yahoo"
+                  onPrice={setLastPrice}
+                  onRangeDelta={(d) => { setRangeDelta(d); }}
                   
                 />
+                {projection != null && (
+                  <div className="mt-2 text-xs opacity-80">
+                    Nota: la línea punteada marca un objetivo estimado para el próximo cierre.
+                  </div>
+                )}
+                </>
               ) : (
                 <div className="rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-amber-200">
                   <div className="font-semibold">Falta símbolo</div>
@@ -320,7 +376,21 @@ export default function HomePage() {
               );
             })}
         </section>
+        {showHelp && feed && (
+          <div className="text-xs opacity-70">Sugerencia: usa “Fijar” para tener a mano tus activos favoritos arriba del todo.</div>
+        )}
       </div>
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
+

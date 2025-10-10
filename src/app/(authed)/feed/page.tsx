@@ -52,6 +52,42 @@ function pct(a?: number, b?: number) {
   return (a / b - 1) * 100;
 }
 
+// ===== Helpers para derivar retorno/vol desde el feed (módulo) =====
+function ppy(h?: string): number {
+  if (!h) return 12;
+  if (h === "1d") return 252;
+  if (h === "1w") return 52;
+  if (h === "1h") return 252 * 6; // aprox sesiones
+  if (typeof h === "string" && h.endsWith("m")) {
+    const m = Number(h.replace("m", ""));
+    return m > 0 ? (12 * 60) / m : 12;
+  }
+  return 12;
+}
+function annualize(mu_h: number, n: number) { return Math.pow(1 + mu_h, Math.max(1, n)) - 1; }
+function annualizeVol(s_h: number, n: number) { return s_h * Math.sqrt(Math.max(1, n)); }
+export function deriveFromFeed(item: FeedItem): { muA: number; sigA: number } | null {
+  const conf = typeof item.p_conf === "number" ? Math.max(0, Math.min(1, item.p_conf)) : 0.5;
+  const n = ppy(item.horizon as string | undefined);
+  const px = item.last_close ?? null;
+  let mu_h = 0; let sig_h: number | null = null;
+  if (typeof item.sigma === "number" && isFinite(item.sigma)) sig_h = Math.max(0, item.sigma);
+  if (px && item.stops && typeof item.stops.tp === "number" && typeof item.stops.sl === "number") {
+    const rTp = item.stops.tp / px - 1; const rSl = item.stops.sl / px - 1;
+    if (item.action === "BUY") mu_h = conf * rTp + (1 - conf) * rSl;
+    else if (item.action === "SELL") mu_h = conf * (-Math.abs(rSl)) + (1 - conf) * Math.abs(rTp);
+    else mu_h = conf * rTp + (1 - conf) * rSl;
+    if (sig_h == null) sig_h = (Math.abs(rTp) + Math.abs(rSl)) / 2;
+  } else {
+    const base = 0.01; // heurística educativa
+    if (item.action === "BUY") mu_h = conf * base;
+    else if (item.action === "SELL") mu_h = -conf * base;
+    else mu_h = 0;
+    if (sig_h == null) sig_h = 0.02;
+  }
+  return { muA: annualize(mu_h, n), sigA: annualizeVol(sig_h ?? 0.02, n) };
+}
+
 function Card({ item }: { item: FeedItem }) {
   const confPct = Math.round((item.p_conf ?? 0) * 100);
   const ts = item.ts ? new Date(item.ts) : new Date();
@@ -61,9 +97,13 @@ function Card({ item }: { item: FeedItem }) {
   const rTp = pct(item.stops?.tp, item.last_close);
   const rSl = pct(item.stops?.sl, item.last_close);
 
+  const derived = useMemo(() => deriveFromFeed(item), [item]);
+
   return (
-    <article className={cn("rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
-                           "shadow-lg shadow-black/30 transition-colors duration-200")}>
+    <article className={cn(
+      "rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
+      "shadow-lg shadow-black/30 transition-colors duration-200 transform-gpu hover:-translate-y-0.5 fade-in-up"
+    )}>
       <div className="p-5">
         <header className="flex items-start justify-between gap-4">
           <div className="space-y-1">
@@ -80,7 +120,7 @@ function Card({ item }: { item: FeedItem }) {
         <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
           <div>
             <span className="opacity-70">Periodo: </span>
-            {horizonLabel((item.horizon as Horizon) || "1d")}
+            Próximo cierre (1 día)
           </div>
           {hasStops ? (
             <>
@@ -111,13 +151,15 @@ function Card({ item }: { item: FeedItem }) {
         {/* Nivel de certeza */}
         <div className="mt-4">
           <div className="flex items-center justify-between text-xs mb-1">
-            <span className="opacity-70">Nivel de certeza</span>
+            <span className="opacity-70 tooltip">Nivel de certeza
+              <span className="tooltip-panel"><div className="tooltip-title">¿Qué es?</div><div className="tooltip-text">Probabilidad central de que el próximo cierre suba. 50% es neutro.</div></span>
+            </span>
             <span className="font-medium">{confPct}%</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
             <div
               className={cn(
-                "h-full rounded-full",
+                "h-full rounded-full progress-smooth",
                 item.action === "BUY"
                   ? "bg-emerald-500"
                   : item.action === "SELL"
@@ -129,7 +171,24 @@ function Card({ item }: { item: FeedItem }) {
               style={{ width: `${confPct}%` }}
             />
           </div>
+          <div className="mt-1 text-[11px] opacity-70">Referencia: 50% ≈ neutral, valores altos = mayor confianza.</div>
         </div>
+
+        {derived && (
+          <div className="mt-4 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-xs">
+            <div className="opacity-80">
+              <div>Retorno anual derivado: <span className="font-semibold">{(derived.muA * 100).toFixed(1)}%</span></div>
+              <div>Volatilidad anual derivada: <span className="font-semibold">{(derived.sigA * 100).toFixed(1)}%</span></div>
+            </div>
+            <Link
+              href={`/simulator?symbol=${encodeURIComponent(item.symbol)}&mu=${(derived.muA).toFixed(6)}&sigma=${(derived.sigA).toFixed(6)}&months=12`}
+              className="btn btn-primary"
+              title="Abrir el simulador con estos parámetros"
+            >
+              Simular con IA
+            </Link>
+          </div>
+        )}
       </div>
     </article>
   );
@@ -202,7 +261,7 @@ function FeedInner() {
 
     const prof = loadRiskProfile()?.profile;
     if (prof === "Conservador") { setHorizon("1d"); setMinConf(0.65); }
-    else if (prof === "Agresivo") { setHorizon("1w"); setMinConf(0.55); }
+    else if (prof === "Agresivo") { setHorizon("1d"); setMinConf(0.55); }
     else { setHorizon("1d"); setMinConf(0.60); } // Moderado/por defecto
 
     initDone.current = true;
@@ -236,6 +295,7 @@ function FeedInner() {
     const qs = new URLSearchParams();
     qs.set("horizon", horizon);
     qs.set("min_conf", String(minConf)); // 0..1
+    qs.set("limit", "200"); // intenta traer más ideas si el backend lo soporta
     getFeed(qs)
       .then((d) => {
         setData(d);
@@ -276,7 +336,7 @@ function FeedInner() {
       symbol: d.symbol,
       accion: actionLabel(d.action),
       certeza: Math.round((d.p_conf ?? 0) * 100),
-      periodo: horizonLabel((d.horizon as Horizon) || "1d"),
+      periodo: "Próximo cierre (1 día)",
       fecha: d.ts ?? "",
       precio: d.last_close ?? "",
       meta_ganancia: d.stops?.tp ?? "",
@@ -319,9 +379,17 @@ function FeedInner() {
         <header className="space-y-1">
           <h1 className="text-3xl font-bold tracking-tight">Recomendaciones para ti</h1>
           <p className="text-sm opacity-70">
-            Ideas simples según tu perfil. Sin jerga, con metas claras.
+            Ideas simples según tu perfil. Sin complicaciones, con metas claras.
           </p>
+          <div className="text-xs opacity-70">Mostrando {Array.isArray(filtered) ? filtered.length : 0} de {Array.isArray(data) ? data.length : 0} ideas</div>
         </header>
+        <section className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="text-sm font-semibold mb-1">¿Qué significa “nivel de certeza”?</div>
+          <p className="text-sm opacity-80">
+            Es la probabilidad central de que el <span className="font-medium">próximo cierre</span> suba. Por ejemplo, 60% sugiere que, en contextos parecidos,
+            6 de cada 10 veces el precio terminó arriba. No garantiza resultados.
+          </p>
+        </section>
 
         {/* FILTROS (claros) */}
         <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex flex-wrap items-center gap-4">
@@ -520,3 +588,7 @@ export default function FeedPage() {
     </Suspense>
   );
 }
+
+
+
+
