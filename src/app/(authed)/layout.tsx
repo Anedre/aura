@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import NavShell from "@/app/components/nav/NavShell";
+import OnboardingTour from "@/app/components/onboarding/OnboardingTour";
 
 export default function AuthedLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -21,5 +22,11 @@ export default function AuthedLayout({ children }: { children: React.ReactNode }
     return () => { alive = false; };
   }, [router, path]);
 
-  return <NavShell>{children}</NavShell>;
+  return (
+    <NavShell>
+      {children}
+      {/* Tour para usuarios nuevos (overlay, controlado por localStorage) */}
+      <OnboardingTour />
+    </NavShell>
+  );
 }

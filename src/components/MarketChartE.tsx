@@ -12,6 +12,7 @@ import type { YahooRange } from "@/hooks/useLiveMarket";
 import type { CallbackDataParams } from "echarts/types/dist/shared";
 import { useAuraStream } from "@/hooks/useAuraStream";
 import type { Provider as StreamProvider } from "@/hooks/useAuraStream";
+import { classifySymbol, mapSymbol } from "@/lib/market";
 
 // Registrar sólo lo necesario (simple)
 echarts.use([CandlestickChart, BarChart, GridComponent, TooltipComponent, DataZoomComponent, CanvasRenderer]);
@@ -70,7 +71,7 @@ function barsFor(range: RangeBtn, tf: TF, total: number): number {
 
 export default function MarketChartE({
   symbol,
-  provider = "yahoo",
+  provider = "auto",
   tf = "5m",
   height = 440,
   className,
@@ -110,9 +111,16 @@ export default function MarketChartE({
   // Pedimos un rango adecuado al backend y recortamos en cliente
   const yahooRangeParam = useMemo(() => mapYahooRange(provider, timeframe, range), [provider, timeframe, range]);
 
+  // Proveedor efectivo por símbolo
+  const effectiveProvider = useMemo<"yahoo"|"binance">(() => {
+    if (provider !== "auto") return provider;
+    const klass = classifySymbol(symbol);
+    return klass === "crypto" ? "binance" : "yahoo";
+  }, [provider, symbol]);
+
   const { candles, lastPrice } = useLiveMarket({
     symbol,
-    provider,
+    provider: effectiveProvider,
     tf: timeframe,
     range: yahooRangeParam,
     refreshMs: maxCandleRefreshMs,
@@ -122,17 +130,18 @@ export default function MarketChartE({
   const { subscribe, unsubscribe, ticks } = useAuraStream();
   const [wsPrice, setWsPrice] = useState<number | null>(null);
   useEffect(() => {
-    const p: StreamProvider | undefined = wsPriceProvider ?? (provider === "auto" ? undefined : (provider as StreamProvider));
+    const p: StreamProvider | undefined = wsPriceProvider ?? ((effectiveProvider === "binance" ? "binance" : effectiveProvider === "yahoo" ? "finnhub" : undefined) as StreamProvider | undefined);
     if (!p) { setWsPrice(null); return; }
-    subscribe(symbol, p);
-    const key = `${p}|${symbol}`;
+    const subSymbol = p === 'binance' ? mapSymbol('binance', symbol) : symbol;
+    subscribe(subSymbol, p);
+    const key = `${p}|${subSymbol}`;
     const id = window.setInterval(() => {
       const arr = (ticks as Record<string, { price: number }[]>)[key] ?? [];
       const last = arr.length ? arr[arr.length - 1].price : null;
       setWsPrice(last != null && Number.isFinite(last) ? last : null);
     }, 1000);
-    return () => { unsubscribe(symbol, p); window.clearInterval(id); };
-  }, [symbol, provider, wsPriceProvider, subscribe, unsubscribe, ticks]);
+    return () => { unsubscribe(subSymbol, p); window.clearInterval(id); };
+  }, [symbol, effectiveProvider, wsPriceProvider, subscribe, unsubscribe, ticks]);
 
   // Último precio hacia el padre (prioriza WS)
   useEffect(() => {

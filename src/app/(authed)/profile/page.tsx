@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getSession, logout } from "@/lib/auth";
+import SymbolAvatar from "@/components/SymbolAvatar";
+import { getAssetMeta } from "@/lib/assets.meta";
 import { notify } from "@/lib/notify";
 
 type Sess = {
@@ -32,6 +34,8 @@ function secsToHuman(secs?: number) {
 
 const PROFILE_PREFS_KEY = "aura_profile_prefs";
 const PROFILE_CHECKLIST_KEY = "aura_profile_check";
+const FAVORITE_ASSET_KEY = "aura_favorite_asset";
+const PREF_CLASS_KEY = "aura_pref_class";
 
 const defaultPrefs = {
   weeklyDigest: true,
@@ -132,6 +136,16 @@ export default function ProfilePage() {
   const [prefs, setPrefs] = useState<Record<PrefKey, boolean>>(defaultPrefs);
   const [checklist, setChecklist] = useState<Record<string, boolean>>(() => ({ ...defaultChecklistState }));
   const [coachMode, setCoachMode] = useState(false);
+  const [fav, setFav] = useState<string>("");
+  const [prefClass, setPrefClass] = useState<"all"|"crypto"|"forex"|"equity"|"etf"|"index">('all');
+  const [showFavPicker, setShowFavPicker] = useState(false);
+  const [favQuery, setFavQuery] = useState("");
+  const SUGGESTIONS: string[] = [
+    "BTC-USD","ETH-USD","LTC-USD","LINK-USD","ADA-USD","SOL-USD","DOGE-USD","XRP-USD","BNB-USD",
+    "SPY","QQQ","TLT","GLD","DIA","IWM","EEM","HYG","XLK","XLE","XLF","XLV","XLY","XLI","XLP","XLB","XLU",
+    "AAPL","MSFT","TSLA","AMZN","NVDA","META","GOOG","GOOGL",
+    "EURUSD=X","USDJPY=X","GBPUSD=X","USDCAD=X",
+  ];
 
   // Carga sesion para mostrar datos (el guard de (authed) ya protege la ruta)
   useEffect(() => {
@@ -143,6 +157,14 @@ export default function ProfilePage() {
     })();
     return () => { alive = false; };
   }, []);
+
+  // Carga y persistencia de activo favorito
+  useEffect(() => {
+    try { const raw = localStorage.getItem(FAVORITE_ASSET_KEY); if (raw) setFav(String(raw)); } catch { /* noop */ }
+    try { const cls = localStorage.getItem(PREF_CLASS_KEY) as typeof prefClass | null; if (cls) setPrefClass(cls); } catch { /* noop */ }
+  }, []);
+  const saveFav = () => { try { localStorage.setItem(FAVORITE_ASSET_KEY, (fav || "").toUpperCase()); } catch { /* noop */ } };
+  const savePrefClass = () => { try { localStorage.setItem(PREF_CLASS_KEY, prefClass); } catch { /* noop */ } };
 
   // Recupera y persiste preferencias
   useEffect(() => {
@@ -422,6 +444,81 @@ export default function ProfilePage() {
               </div>
             )}
           </article>
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+          <h2 className="text-lg font-semibold">Activo favorito</h2>
+          <p className="mt-1 text-sm text-white/70">Elige un símbolo (ej. BTC-USD, AAPL, EURUSD=X). Se destacará en tu inicio.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input className="input w-48" placeholder="Símbolo" value={fav} onChange={(e) => setFav(e.target.value.toUpperCase())} />
+            <button className="btn" onClick={() => setShowFavPicker(true)}>Elegir</button>
+            <button className="btn btn-primary" onClick={saveFav}>Guardar favorito</button>
+            {fav && <span className="chip">Actual: {fav}</span>}
+          </div>
+          {showFavPicker && (
+            <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
+              <div className="absolute inset-0 bg-black/60" onClick={() => setShowFavPicker(false)} />
+              <div className="absolute inset-0 flex items-start sm:items-center justify-center p-4 sm:p-6">
+                <div className="card w-full max-w-xl p-4">
+                  <div className="text-sm opacity-75 mb-2">Buscar símbolo</div>
+                  <input
+                    autoFocus
+                    className="input w-full"
+                    placeholder="Escribe un símbolo (ej. BTC-USD, AAPL, EURUSD=X)"
+                    value={favQuery}
+                    onChange={(e) => setFavQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const q = favQuery.trim().toUpperCase();
+                        const matches = SUGGESTIONS.filter(s => s.includes(q));
+                        const pick = (matches[0] ?? q);
+                        setFav(pick); saveFav(); setShowFavPicker(false);
+                      } else if (e.key === 'Escape') { setShowFavPicker(false); }
+                    }}
+                  />
+                  <div className="mt-2 max-h-72 overflow-auto">
+                    {(SUGGESTIONS.filter(s => s.toLowerCase().includes(favQuery.toLowerCase())).slice(0, 25)).map((s) => {
+                      const m = getAssetMeta(s);
+                      return (
+                        <button
+                          key={s}
+                          className={`w-full text-left px-3 py-2 rounded hover:bg-white/10 ${s===fav? 'bg-white/5':''}`}
+                          onClick={() => { setFav(s); saveFav(); setShowFavPicker(false); }}
+                        >
+                          <span className="inline-flex items-center gap-2">
+                            <SymbolAvatar symbol={s} size={18} />
+                            <span className="font-medium">{s}</span>
+                            {m?.name && <span className="opacity-70 text-xs">{m.name}</span>}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between mt-3 text-xs opacity-60">
+                    <span>Enter: seleccionar</span>
+                    <span>Esc: cerrar</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+          <h2 className="text-lg font-semibold">Clase preferida en inicio</h2>
+          <p className="mt-1 text-sm text-white/70">Usamos esta preferencia como filtro por defecto en tu página de inicio. Puedes quitarlo desde la misma pantalla.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select className="input w-56" value={prefClass} onChange={(e) => setPrefClass(e.target.value as typeof prefClass)}>
+              <option value="all">Todas</option>
+              <option value="crypto">Cripto</option>
+              <option value="forex">Forex</option>
+              <option value="equity">Acciones</option>
+              <option value="etf">ETF</option>
+              <option value="index">Índices</option>
+            </select>
+            <button className="btn btn-primary" onClick={savePrefClass}>Guardar preferencia</button>
+            <span className="chip">Actual: {prefClass}</span>
+          </div>
         </section>
 
         <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">

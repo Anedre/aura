@@ -8,6 +8,8 @@ import {
 } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import AuthShell from "@/app/components/AuthShell";
+import Link from "next/link";
+
 
 function errMsg(err: unknown): string {
   if (err instanceof Error) return err.message;
@@ -79,7 +81,7 @@ export default function RegisterPage() {
       footer={
         <div>
           ¿Ya tienes cuenta?{" "}
-          <a className="link" href="/login">Inicia sesión</a>
+          <Link className="link" href="/">Inicia sesión</Link>
         </div>
       }
     >

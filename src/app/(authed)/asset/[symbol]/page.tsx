@@ -6,6 +6,11 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 const MarketChartE = dynamic(() => import('@/components/MarketChartE'), { ssr: false });
 import PriceTicker from "@/components/PriceTicker";
+import SymbolAvatar from "@/components/SymbolAvatar";
+import AssetHover from "@/components/AssetHover";
+import { getAssetMeta } from "@/lib/assets.meta";
+import { classifySymbol, type AssetClass, getSessionInfo } from "@/lib/market";
+import { GlossaryText } from "@/components/glossary/Glossary";
 /* ================= Tipos para posiciones (modo demo) ================= */
 import type { RangeBtn } from "@/components/MarketChartE"; // <-- agrega este type-only import
 
@@ -222,6 +227,24 @@ export default function AssetPage({ params }: { params: { symbol?: string } }) {
 
   const [rangeDelta, setRangeDelta] = useState<number | null>(null);
   const [rangeLabel, setRangeLabel] = useState<RangeBtn>('MAX');
+  const meta = useMemo(() => getAssetMeta(symbol), [symbol]);
+  const klass = useMemo<AssetClass | 'other'>(() => classifySymbol(symbol) as AssetClass | 'other', [symbol]);
+  const session = useMemo(() => getSessionInfo(symbol), [symbol]);
+  const longCopy = useMemo(() => {
+    const name = meta?.name ?? symbol;
+    const intro = meta?.description ?? `Activo de tipo ${klass}.`;
+    const extra = klass === 'crypto'
+      ? `Opera 24/7 y suele presentar mayor volatilidad que otros mercados. Si recién empiezas, usa un horizonte claro y evita el apalancamiento hasta sentirte cómodo con el riesgo.`
+      : klass === 'forex'
+        ? `Es un mercado 24/5 con alta liquidez. Los pares se mueven por diferenciales de tasas e información macro. Define tu horizonte y observa eventos que puedan aumentar la volatilidad.`
+        : klass === 'etf'
+          ? `Un ETF replica un índice o cesta; permite diversificación con una sola compra. Útil para reducir riesgo idiosincrático y aprender dinámica de mercado con menor complejidad.`
+          : klass === 'equity'
+            ? `Acción individual: su precio puede ser sensible a resultados, guías y noticias. Revisa liquidez y volatilidad antes de operar y ajusta el tamaño de posición al riesgo.`
+            : `Activo de mercado. Revisa liquidez y horizonte antes de tomar decisiones.`;
+    const sess = session?.note ? `Sesión: ${session.note}` : '';
+    return `${name}. ${intro} ${extra} ${sess}`;
+  }, [meta?.name, meta?.description, klass, session?.note, symbol]);
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
@@ -229,7 +252,10 @@ export default function AssetPage({ params }: { params: { symbol?: string } }) {
       <div className="max-w-[1400px] mx-auto px-6 py-8 space-y-6">
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-semibold">{symbol}</h1>
+            <h1 className="text-2xl font-semibold flex items-center gap-2">
+              <SymbolAvatar symbol={symbol} size={26} />
+              <AssetHover symbol={symbol}><span>{symbol}</span></AssetHover>
+            </h1>
             {rangeDelta != null && (
               <span
                 className={`px-2 py-1 rounded text-xs ${
@@ -246,8 +272,16 @@ export default function AssetPage({ params }: { params: { symbol?: string } }) {
           </div>
         </header>
 
+        {/* Descripción completa del activo (texto educativo, sin hover) */}
+        <section className="card p-4">
+          <div className="text-sm opacity-80 mb-1">Descripción</div>
+          <div className="text-sm leading-relaxed">
+            <GlossaryText text={longCopy} />
+          </div>
+        </section>
+
         <div className="mb-2">
-          <PriceTicker price={last} deltaPct={rangeDelta ?? null} />
+          <PriceTicker symbol={symbol} price={last} deltaPct={rangeDelta ?? null} />
         </div>
 
 
@@ -258,7 +292,7 @@ export default function AssetPage({ params }: { params: { symbol?: string } }) {
           <div className="min-h-[380px] xl:min-h-[520px]">
             <MarketChartE
               symbol={symbol}
-              provider="yahoo"
+              provider="auto"
               tf="5m"
               height={440}
               onPrice={setLast}

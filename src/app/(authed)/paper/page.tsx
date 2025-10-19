@@ -8,6 +8,8 @@ import MarketChartE from "@/components/MarketChartE";
 import PriceTicker from "@/components/PriceTicker";
 import { logout } from "@/lib/auth";
 import { useLivePrice } from "@/hooks/useLivePrice";
+import SymbolAvatar from "@/components/SymbolAvatar";
+import AssetHover from "@/components/AssetHover";
 
 // Mini gráfico PnL
 import ReactECharts from "echarts-for-react";
@@ -283,14 +285,13 @@ export default function PaperPage() {
             <div className="card p-2 sm:p-3">
               <MarketChartE
                 symbol={symbol}
-                provider="yahoo"
+                provider="auto"
                 tf="5m"
                 height={460}
                 onPrice={setMark}
                 baseline={breakeven ?? null}
                 showLastPrice
                 onRangeDelta={(d) => { setRangeDelta(d); }}
-                wsPriceProvider="yahoo"
               />
             </div>
           </div>
@@ -345,8 +346,15 @@ export default function PaperPage() {
                   <div className="text-sm opacity-60 px-1 py-2">Sin coincidencias</div>
                 ) : (
                   matches.map((s) => (
-                    <button key={s} className={`w-full text-left px-3 py-2 rounded hover:bg-white/10 ${s===symbol? 'bg-white/5':''}`} onClick={() => { setSymbol(s); setQuery(s); setShowSearch(false); }}>
-                      {s}
+                    <button
+                      key={s}
+                      className={`w-full text-left px-3 py-2 rounded hover:bg-white/10 ${s===symbol? 'bg-white/5':''}`}
+                      onClick={() => { setSymbol(s); setQuery(s); setShowSearch(false); }}
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <SymbolAvatar symbol={s} size={18} />
+                        <AssetHover symbol={s}><span>{s}</span></AssetHover>
+                      </span>
                     </button>
                   ))
                 )}

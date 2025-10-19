@@ -45,6 +45,8 @@ function normalizeToBinance(sym: string): string {
   }
   // BTC-TRX → BTCTRX (pares cripto-cripto)
   if (/-|\/ /.test(sym)) return s.replace(/[-/]/g, "");
+  // Si solo viene base (BTC), asumir USDT
+  if (!/USDT$/.test(s)) return `${s}USDT`;
   return s;
 }
 

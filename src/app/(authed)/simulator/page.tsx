@@ -6,6 +6,8 @@ import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 const MarketChartE = dynamic(() => import("@/components/MarketChartE"), { ssr: false });
 import PriceTicker from "@/components/PriceTicker";
+import SymbolAvatar from "@/components/SymbolAvatar";
+import AssetHover from "@/components/AssetHover";
 
 import {
   simulateInvestment,
@@ -679,8 +681,15 @@ export default function SimulatorPage() {
                     <div className="text-sm opacity-60 px-1 py-2">Sin coincidencias</div>
                   ) : (
                     matches.map((s) => (
-                      <button key={s} className={`w-full text-left px-3 py-2 rounded hover:bg-white/10 ${s===symbol? 'bg-white/5':''}`} onClick={() => { setSymbol(s); setQuery(s); setShowSearch(false); }}>
-                        {s}
+                      <button
+                        key={s}
+                        className={`w-full text-left px-3 py-2 rounded hover:bg-white/10 ${s===symbol? 'bg-white/5':''}`}
+                        onClick={() => { setSymbol(s); setQuery(s); setShowSearch(false); }}
+                      >
+                        <span className="inline-flex items-center gap-2">
+                          <SymbolAvatar symbol={s} size={18} />
+                          <AssetHover symbol={s}><span>{s}</span></AssetHover>
+                        </span>
                       </button>
                     ))
                   );
@@ -725,17 +734,20 @@ function RightChart({ symbol }: { symbol: string }) {
   return (
     <div>
       <div className="mb-2">
-        <PriceTicker price={last} deltaPct={delta ?? null} symbol={symbol} />
+        <div className="flex items-center gap-2">
+          <PriceTicker price={last} deltaPct={delta ?? null} symbol={symbol} symbolMode="plain" />
+          <AssetHover symbol={symbol}><span className="info-badge">i</span></AssetHover>
+        </div>
       </div>
       <MarketChartE
-        symbol={symbol}
-        provider="yahoo"
-        tf="5m"
-        height={360}
-        onPrice={setLast}
-        onRangeDelta={(d, r) => { setDelta(d); setLabel(r); }}
-        showLastPrice
-      />
+          symbol={symbol}
+          provider="auto"
+          tf="5m"
+          height={360}
+          onPrice={setLast}
+          onRangeDelta={(d, r) => { setDelta(d); setLabel(r); }}
+          showLastPrice
+        />
       {delta != null && (
         <div className="mt-2 text-xs opacity-80">Variación acumulada ({label}): {delta >= 0 ? "↑" : "↓"} {Math.abs(delta).toFixed(2)}%</div>
       )}

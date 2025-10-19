@@ -3,8 +3,11 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import SymbolAvatar from "@/components/SymbolAvatar";
+import AssetHover from "@/components/AssetHover";
 import { getFeed, type FeedItem } from "@/lib/api.feed";
 import { loadRiskProfile } from "@/lib/invest";
+import { classifySymbol, type AssetClass, getSessionInfo } from "@/lib/market";
 
 type Horizon = "1d" | "1w";
 type ActionFilter = "ALL" | "BUY" | "SELL" | "HOLD" | "ABSTAIN";
@@ -21,9 +24,6 @@ function actionLabel(a: FeedItem["action"]) {
   if (a === "ABSTAIN") return "Sin señal clara";
   return a;
 }
-function horizonLabel(h: Horizon) {
-  return h === "1w" ? "Próximas semanas" : "Próximos días";
-}
 
 function ActionBadge({ action }: { action: FeedItem["action"] }) {
   const styles =
@@ -34,15 +34,24 @@ function ActionBadge({ action }: { action: FeedItem["action"] }) {
       : action === "ABSTAIN"
       ? "text-amber-300 ring-amber-500/30 bg-amber-500/10"
       : "text-slate-300 ring-slate-500/30 bg-slate-500/10";
+  const explain = action === "BUY"
+    ? "Sube: mayor probabilidad de cierre al alza."
+    : action === "SELL"
+      ? "Baja: mayor probabilidad de cierre a la baja."
+      : action === "HOLD"
+        ? "En espera: no hay ventaja clara para operar."
+        : "Sin señal clara: información insuficiente o incertidumbre alta.";
   return (
-    <span
-      className={cn(
-        "px-2 py-0.5 rounded-full text-xs font-semibold tracking-wide ring-1 shadow-sm backdrop-blur",
-        styles,
-      )}
-      title={action}
-    >
-      {actionLabel(action)}
+    <span className="tooltip">
+      <span
+        className={cn(
+          "px-2 py-0.5 rounded-full text-xs font-semibold tracking-wide ring-1 shadow-sm backdrop-blur",
+          styles,
+        )}
+      >
+        {actionLabel(action)}
+      </span>
+      <div role="tooltip" className="tooltip-panel"><div className="tooltip-title">¿Qué significa?</div><div className="tooltip-text">{explain}</div></div>
     </span>
   );
 }
@@ -98,6 +107,11 @@ function Card({ item }: { item: FeedItem }) {
   const rSl = pct(item.stops?.sl, item.last_close);
 
   const derived = useMemo(() => deriveFromFeed(item), [item]);
+  const session = useMemo(() => getSessionInfo(item.symbol), [item.symbol]);
+  const classLabel = useMemo(() => {
+    const c = classifySymbol(item.symbol);
+    return c === 'crypto' ? 'Cripto' : c === 'equity' ? 'Acción' : c === 'etf' ? 'ETF' : c === 'forex' ? 'Forex' : c === 'index' ? 'Índice' : 'Otro';
+  }, [item.symbol]);
 
   return (
     <article className={cn(
@@ -108,11 +122,22 @@ function Card({ item }: { item: FeedItem }) {
         <header className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold tracking-wide">
-              <Link href={`/asset/${item.symbol}`} className="hover:underline">
-                {item.symbol}
+              <Link href={`/asset/${item.symbol}`} className="hover:underline flex items-center gap-2">
+                <SymbolAvatar symbol={item.symbol} size={20} />
+                <AssetHover symbol={item.symbol}><span>{item.symbol}</span></AssetHover>
               </Link>
             </h3>
-            <ActionBadge action={item.action} />
+            <div className="flex items-center gap-2">
+              <ActionBadge action={item.action} />
+              <span className="chip">{classLabel}</span>
+              {session && (
+                session.is24x7 ? (
+                  <span className="chip">24/7</span>
+                ) : (
+                  <span className="chip">{session.isOpen ? 'Abierto' : 'Cerrado'} · {session.isOpen ? (session.nextCloseLocal ? `cierra ${session.nextCloseLocal}` : '') : (session.nextOpenLocal ? `abre ${session.nextOpenLocal}` : '')}</span>
+                )
+              )}
+            </div>
           </div>
           <time className="text-xs opacity-70">{safeDate}</time>
         </header>
@@ -222,6 +247,7 @@ function FeedInner() {
   const [minConf, setMinConf] = useState<number>(0.60); // valor amigable por defecto
   const [action, setAction] = useState<ActionFilter>("ALL");
   const [q, setQ] = useState<string>("");
+  const [classFilter, setClassFilter] = useState<AssetClass | 'all'>('all');
   const [sort, setSort] = useState<SortKey>("conf");
   const [onlyStops, setOnlyStops] = useState(false);
   const [tick, setTick] = useState(0);
@@ -276,10 +302,11 @@ function FeedInner() {
     qsp.set("a", action);
     qsp.set("s", sort);
     if (q) qsp.set("q", q); else qsp.delete("q");
+    qsp.set("cls", classFilter);
     qsp.set("stops", onlyStops ? "1" : "0");
     router.replace(`${pathname}?${qsp.toString()}`);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [horizon, minConf, action, sort, q, onlyStops]);
+  }, [horizon, minConf, action, sort, q, onlyStops, classFilter]);
 
   // Auto-refresh
   useEffect(() => {
@@ -313,7 +340,8 @@ function FeedInner() {
         ? !!(d.stops && typeof d.stops.tp === "number" && typeof d.stops.sl === "number")
         : true;
       const passQ = q ? d.symbol.toLowerCase().includes(q.toLowerCase()) : true;
-      return passConf && passAct && passStops && passQ;
+      const passClass = classFilter === 'all' ? true : classifySymbol(d.symbol) === classFilter;
+      return passConf && passAct && passStops && passQ && passClass;
     });
     const sorted = [...f].sort((a, b) => {
       if (sort === "conf") return (b.p_conf ?? 0) - (a.p_conf ?? 0);
@@ -322,7 +350,7 @@ function FeedInner() {
       return 0;
     });
     return sorted;
-  }, [data, minConf, action, onlyStops, q, sort]);
+  }, [data, minConf, action, onlyStops, q, sort, classFilter]);
 
   const counts = useMemo(() => {
     const base: Record<FeedItem["action"], number> = { BUY: 0, SELL: 0, ABSTAIN: 0, HOLD: 0 };
@@ -448,6 +476,22 @@ function FeedInner() {
             >
               <option value="conf">Mayor certeza</option>
               <option value="date">Más recientes</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm opacity-80">Clase</span>
+            <select
+              value={classFilter}
+              onChange={(e) => setClassFilter(e.currentTarget.value as AssetClass | 'all')}
+              className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm"
+            >
+              <option value="all">Todas</option>
+              <option value="crypto">Cripto</option>
+              <option value="equity">Acciones</option>
+              <option value="etf">ETF</option>
+              <option value="forex">Forex</option>
+              <option value="index">Índices</option>
             </select>
           </div>
 
@@ -588,7 +632,3 @@ export default function FeedPage() {
     </Suspense>
   );
 }
-
-
-
-
