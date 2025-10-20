@@ -5,18 +5,22 @@ import MarketSessionBadge from "@/components/MarketSessionBadge";
 import SymbolAvatar from "@/components/SymbolAvatar";
 import AssetHover from "@/components/AssetHover";
 import { useLivePrice } from "@/hooks/useLivePrice";
+import { useRealtimePrice } from "@/hooks/useRealtimePrice";
 import { TechTerm } from "@/components/glossary/Glossary";
+import PriceChangeBadge from "@/components/PriceChangeBadge";
+
+const REALTIME_MAX_SKEW_MS = 15_000;
 
 export type PriceTickerProps = {
   price: number | null | undefined;
   deltaPct?: number | null;
   className?: string;
-  decimals?: number; // si no se pasa: 2 para >=100, si no 3
-  percentDecimals?: number; // default 2
-  updateEveryMs?: number; // refresco del rótulo de hora
-  symbol?: string; // símbolo a mostrar (ej. BTC-USD)
-  symbolMode?: 'avatar' | 'plain' | 'none'; // cómo renderizar el símbolo junto al precio
-  hover?: boolean; // si envolver el símbolo con tooltip (AssetHover)
+  decimals?: number;
+  percentDecimals?: number;
+  updateEveryMs?: number;
+  symbol?: string;
+  symbolMode?: "avatar" | "plain" | "none";
+  hover?: boolean;
 };
 
 export default function PriceTicker({
@@ -27,35 +31,52 @@ export default function PriceTicker({
   percentDecimals = 2,
   updateEveryMs = 5_000,
   symbol,
-  symbolMode = 'avatar',
+  symbolMode = "avatar",
   hover = true,
 }: PriceTickerProps) {
   const [now, setNow] = useState<Date>(new Date());
   const [flash, setFlash] = useState<"up" | "down" | null>(null);
   const prevRef = useRef<number | null>(null);
 
-  // Precio en vivo independiente (WS) si hay símbolo
   const live = useLivePrice(symbol ?? "");
+  const realtime = useRealtimePrice(symbol ?? "");
+
+  const realtimeFresh = useMemo(() => {
+    if (!symbol) return false;
+    if (realtime.price == null) return false;
+    if (realtime.stale) return false;
+    if (realtime.ts == null) return true;
+    return Date.now() - realtime.ts < REALTIME_MAX_SKEW_MS;
+  }, [symbol, realtime.price, realtime.stale, realtime.ts]);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), updateEveryMs);
     return () => clearInterval(id);
   }, [updateEveryMs]);
 
-  const displayPrice = live?.price ?? price ?? null;
+  const fallbackPrice = useMemo(() => {
+    if (live?.price != null && Number.isFinite(live.price)) return live.price;
+    if (price != null && Number.isFinite(price)) return price;
+    return null;
+  }, [live?.price, price]);
+
+  const displayPrice = useMemo(() => {
+    if (realtimeFresh && realtime.price != null && Number.isFinite(realtime.price)) return realtime.price;
+    if (realtime.price != null && !realtime.stale && Number.isFinite(realtime.price)) return realtime.price;
+    return fallbackPrice;
+  }, [realtimeFresh, realtime.price, realtime.stale, fallbackPrice]);
 
   const { diffAbs } = useMemo(() => {
     if (displayPrice == null || !Number.isFinite(displayPrice) || deltaPct == null || !Number.isFinite(deltaPct)) {
       return { base: null as number | null, diffAbs: null as number | null };
     }
-    const b = displayPrice / (1 + (deltaPct / 100));
-    return { base: b, diffAbs: displayPrice - b };
+    const base = displayPrice / (1 + (deltaPct / 100));
+    return { base, diffAbs: displayPrice - base };
   }, [displayPrice, deltaPct]);
 
   const up = (diffAbs ?? 0) >= 0;
   const color = up ? "text-emerald-300" : "text-rose-300";
 
-  // Efecto visual cuando cambia el precio
   useEffect(() => {
     const prev = prevRef.current;
     if (displayPrice != null && Number.isFinite(displayPrice) && prev != null && Number.isFinite(prev) && displayPrice !== prev) {
@@ -73,45 +94,69 @@ export default function PriceTicker({
     return displayPrice >= 100 ? 2 : 3;
   }, [decimals, displayPrice]);
 
-  const nfDyn = (n: number, d: number) => n.toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const nf = (value: number, d: number) =>
+    value.toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
 
   return (
     <div className={`${className ?? ""} ${flash === "up" ? "price-flash-up" : flash === "down" ? "price-flash-down" : ""}`}>
       <div className="flex items-baseline gap-3 flex-wrap">
-        {symbol && symbolMode !== 'none' && (
-          symbolMode === 'plain' ? (
+        {symbol && symbolMode !== "none" && (
+          symbolMode === "plain" ? (
             hover ? (
-              <AssetHover symbol={symbol}><span className="chip select-none">{symbol}</span></AssetHover>
+              <AssetHover symbol={symbol}>
+                <span className="chip select-none">{symbol}</span>
+              </AssetHover>
             ) : (
               <span className="chip select-none">{symbol}</span>
             )
-          ) : (
-            hover ? (
-              <AssetHover symbol={symbol}>
-                <span className="chip select-none flex items-center gap-1">
-                  <SymbolAvatar symbol={symbol} size={18} />
-                  <span>{symbol}</span>
-                </span>
-              </AssetHover>
-            ) : (
+          ) : hover ? (
+            <AssetHover symbol={symbol}>
               <span className="chip select-none flex items-center gap-1">
                 <SymbolAvatar symbol={symbol} size={18} />
                 <span>{symbol}</span>
               </span>
-            )
+            </AssetHover>
+          ) : (
+            <span className="chip select-none flex items-center gap-1">
+              <SymbolAvatar symbol={symbol} size={18} />
+              <span>{symbol}</span>
+            </span>
           )
         )}
-        <div className="font-extrabold tracking-tight text-3xl md:text-4xl">
-          {displayPrice != null && Number.isFinite(displayPrice) ? nfDyn(displayPrice, pDecimals) : "-"}
+        <div className="flex items-center gap-2">
+          <div className="font-extrabold tracking-tight text-3xl md:text-4xl">
+            {displayPrice != null && Number.isFinite(displayPrice) ? nf(displayPrice, pDecimals) : "-"}
+          </div>
+          <PriceChangeBadge value={displayPrice} />
+          <span className="tooltip">
+            <span className="info-badge" tabIndex={0} aria-label="¿Qué significa este precio?">?</span>
+            <div role="tooltip" className="tooltip-panel">
+              <div className="tooltip-title">Precio en vivo</div>
+              <div className="tooltip-text">
+                Mostramos el último tick recibido por streaming. Si todavía no hay datos nuevos, verás el cierre más reciente del historial.
+                Toca el ícono cuando quieras recordar qué dato estás observando.
+              </div>
+            </div>
+          </span>
         </div>
-        <div className={`font-semibold ${color}`}>
+        <div className={`flex items-center gap-2 font-semibold ${color}`}>
           {diffAbs != null && Number.isFinite(diffAbs) ? (
             <>
-              {up ? "▲" : "▼"} {nfDyn(Math.abs(diffAbs), pDecimals)} ({nfDyn(Math.abs(deltaPct ?? 0), percentDecimals)} %)
+              {up ? "↑" : "↓"} {nf(Math.abs(diffAbs), pDecimals)} ({nf(Math.abs(deltaPct ?? 0), percentDecimals)} %)
             </>
           ) : (
             <span className="opacity-60">sin cambios</span>
           )}
+          <span className="tooltip">
+            <span className="info-badge" tabIndex={0} aria-label="¿Por qué cambia este número?">?</span>
+            <div role="tooltip" className="tooltip-panel">
+              <div className="tooltip-title">Variación del rango</div>
+              <div className="tooltip-text">
+                Este dato compara el precio actual con el primer punto del rango visible (1D, 1W, 1M, etc.).
+                Si cambias el rango o te mueves con el zoom, el punto de referencia cambia y el porcentaje puede variar aunque el precio en vivo sea el mismo.
+              </div>
+            </div>
+          </span>
         </div>
         {symbol && <MarketSessionBadge symbol={symbol} />}
       </div>
@@ -121,3 +166,4 @@ export default function PriceTicker({
     </div>
   );
 }
+

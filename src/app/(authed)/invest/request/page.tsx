@@ -151,7 +151,7 @@ export default function InvestRequestPage() {
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+      <div className="max-w-5xl mx-auto px-3 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
         <header className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Solicitud de predicción</h1>

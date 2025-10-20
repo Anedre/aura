@@ -153,6 +153,21 @@ input[type="range"] { accent-color: var(--accent); }
 @keyframes auraFlashUp { 0% { background: color-mix(in oklab, var(--success) 22%, transparent); } 100% { background: transparent; } }
 @keyframes auraFlashDown { 0% { background: color-mix(in oklab, var(--danger) 22%, transparent); } 100% { background: transparent; } }
 
+/* Price change badge */
+.price-badge-neutral { background: color-mix(in oklab, var(--foreground) 8%, transparent); border-color: color-mix(in oklab, var(--border) 65%, transparent); color: color-mix(in oklab, var(--foreground) 80%, transparent); }
+.price-badge-up { background: color-mix(in oklab, var(--success) 14%, transparent); border-color: color-mix(in oklab, var(--success) 40%, var(--border)); color: color-mix(in oklab, white 90%, var(--success)); }
+.price-badge-down { background: color-mix(in oklab, var(--danger) 14%, transparent); border-color: color-mix(in oklab, var(--danger) 40%, var(--border)); color: color-mix(in oklab, white 92%, var(--danger)); }
+.price-badge-blink-up { animation: badgePulseUp 780ms ease; }
+.price-badge-blink-down { animation: badgePulseDown 780ms ease; }
+@keyframes badgePulseUp {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--success) 40%, transparent); }
+  100% { box-shadow: 0 0 0 10px transparent; }
+}
+@keyframes badgePulseDown {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--danger) 40%, transparent); }
+  100% { box-shadow: 0 0 0 10px transparent; }
+}
+
 /* Tooltips */
 .tooltip { position: relative; display: inline-block; }
 .tooltip .tooltip-panel { position: absolute; z-index: 40; top: calc(100% + 8px); left: 50%; transform: translateX(-50%) translateY(-2px); padding: .6rem .7rem; min-width: 220px; border-radius: .8rem; background: color-mix(in oklab, var(--card) 96%, transparent); border: 1px solid color-mix(in oklab, var(--border) 75%, transparent); box-shadow: 0 10px 30px color-mix(in oklab, black 70%, transparent); opacity: 0; pointer-events: none; transition: opacity var(--aura-transition) ease, transform var(--aura-transition) ease; }
@@ -165,6 +180,8 @@ input[type="range"] { accent-color: var(--accent); }
 /* Day overrides for Tailwind utility backgrounds used in toolbars */
 :root[data-theme="day"] .bg-white\/5  { background-color: color-mix(in oklab, black 5%, transparent) !important; }
 :root[data-theme="day"] .bg-white\/10 { background-color: color-mix(in oklab, black 10%, transparent) !important; }
+:root[data-theme="day"] .bg-white\/15 { background-color: color-mix(in oklab, black 15%, transparent) !important; }
+:root[data-theme="day"] .bg-white\/20 { background-color: color-mix(in oklab, black 20%, transparent) !important; }
 
 /* Smooth progress width transitions */
 .progress-smooth { transition: width var(--aura-transition) ease; }

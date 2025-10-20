@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { mapSymbol, mapTf } from '@/lib/market';
 
 export type TF = '5m' | '15m' | '1h' | '4h' | '1d';
 export type Provider = 'auto' | 'yahoo' | 'binance';
@@ -53,7 +54,14 @@ export function useLiveMarket(opts: UseLiveMarketOptions): LiveMarketState {
     let alive = true;
 
     async function load(): Promise<void> {
-      if (!base) {
+      const sym = (symbol ?? '').trim();
+      if (!sym) {
+        setCandles([]);
+        setIsLoading(false);
+        setError(null);
+        return;
+      }
+      if (provider !== 'yahoo' && !base) {
         setError('NEXT_PUBLIC_AURAFEED_URL no está configurada');
         setIsLoading(false);
         return;
@@ -62,8 +70,32 @@ export function useLiveMarket(opts: UseLiveMarketOptions): LiveMarketState {
         setIsLoading(true);
         setError(null);
 
-        const url = buildUrl(base, symbol, tf, provider, range);
-        const r = await fetch(url, { cache: 'no-store' });
+        if (provider === 'yahoo') {
+          const mapped = mapSymbol('yahoo', sym);
+          const interval = mapTf('yahoo', tf);
+          const yahooRange = range ?? (tf === '1d' ? '1mo' : '5d');
+          const urlLocal = `/api/yahoo/candles?symbol=${encodeURIComponent(mapped)}&interval=${encodeURIComponent(interval)}&range=${encodeURIComponent(yahooRange)}`;
+          const resLocal = await fetch(urlLocal, { cache: 'no-store' });
+          if (!resLocal.ok) throw new Error(`HTTP ${resLocal.status}`);
+          const jLocal = await resLocal.json();
+          const arrLocal: Candle[] = Array.isArray((jLocal as { candles?: unknown }).candles)
+            ? ((jLocal as { candles: Candle[] }).candles)
+            : (Array.isArray(jLocal) ? (jLocal as Candle[]) : []);
+          if (!alive) return;
+          setCandles(arrLocal);
+          return;
+        }
+
+        const url = buildUrl(base, sym, tf, provider, range);
+        let r = await fetch(url, { cache: 'no-store' });
+        if (!r.ok && provider === 'binance') {
+          // Fallback to Yahoo with a symbol remapped to Yahoo's format (e.g., BTCUSDT -> BTC-USD)
+          const symYahoo = /USDT$/i.test(sym)
+            ? `${sym.replace(/USDT$/i, '')}-USD`
+            : (/-USD$/i.test(sym) ? sym : mapSymbol('yahoo', sym));
+          const url2 = buildUrl(base, symYahoo, tf, 'yahoo', range);
+          r = await fetch(url2, { cache: 'no-store' });
+        }
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
 
         const j = await r.json();

@@ -4,15 +4,21 @@
 import { notFound } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-const MarketChartE = dynamic(() => import('@/components/MarketChartE'), { ssr: false });
+type RangeBtn = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "MAX";
+// Use the component's own exported Props to keep types aligned
+const MarketChartE = dynamic<import("@/components/MarketChartE").Props>(
+  () => import("@/components/MarketChartE").then((m) => m.default),
+  { ssr: false }
+);
 import PriceTicker from "@/components/PriceTicker";
 import SymbolAvatar from "@/components/SymbolAvatar";
 import AssetHover from "@/components/AssetHover";
 import { getAssetMeta } from "@/lib/assets.meta";
 import { classifySymbol, type AssetClass, getSessionInfo } from "@/lib/market";
 import { GlossaryText } from "@/components/glossary/Glossary";
+import RealtimePrice from "@/components/RealtimePrice";
+// import WsDebugStatus from "@/components/WsDebugStatus";
 /* ================= Tipos para posiciones (modo demo) ================= */
-import type { RangeBtn } from "@/components/MarketChartE"; // <-- agrega este type-only import
 
 type PositionSide = "LONG" | "SHORT";
 type Position = {
@@ -280,9 +286,12 @@ export default function AssetPage({ params }: { params: { symbol?: string } }) {
           </div>
         </section>
 
-        <div className="mb-2">
+        <div className="mb-4 space-y-3">
+          <RealtimePrice assetId={symbol} className="flex flex-wrap items-center gap-2 text-sm px-3 py-2 rounded bg-white/5 border border-white/10" />
           <PriceTicker symbol={symbol} price={last} deltaPct={rangeDelta ?? null} />
         </div>
+
+        {/* WS Debug deshabilitado para modo 100% local */}
 
 
         {/* grid de 2 columnas: chart flexible + panel de ancho fijo */}
@@ -292,13 +301,12 @@ export default function AssetPage({ params }: { params: { symbol?: string } }) {
           <div className="min-h-[380px] xl:min-h-[520px]">
             <MarketChartE
               symbol={symbol}
-              provider="auto"
               tf="5m"
               height={440}
               onPrice={setLast}
               baseline={null}
               showLastPrice
-              onRangeDelta={(d, r) => { setRangeDelta(d); setRangeLabel(r); }}  
+              onRangeDelta={(d: number, r: RangeBtn) => { setRangeDelta(d); setRangeLabel(r); }}  
             />
           </div>
 
@@ -310,3 +318,4 @@ export default function AssetPage({ params }: { params: { symbol?: string } }) {
     </main>
   );
 }
+

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useAuraStream, type Provider as StreamProvider } from "@/hooks/useAuraStream";
+import type { Provider as StreamProvider } from "@/hooks/useAuraStream";
 import { useLiveMarket } from "@/hooks/useLiveMarket";
-import { classifySymbol } from "@/lib/market";
+import { classifySymbol, mapSymbol } from "@/lib/market";
 import { useDirectRealtime } from "@/hooks/useDirectRealtime";
 
 export function pickProvider(symbol: string): StreamProvider {
@@ -15,25 +15,19 @@ export function pickProvider(symbol: string): StreamProvider {
 
 export function useLivePrice(symbol: string, provider?: StreamProvider) {
   const prov = provider ?? pickProvider(symbol);
-  const { subscribe, unsubscribe, ticks } = useAuraStream();
-  const [wsPrice, setWsPrice] = useState<number | null>(null);
-  const key = `${prov}|${symbol}`;
+  // WS backend deshabilitado en modo local
+  const [wsPrice] = useState<number | null>(null);
+  const subSymbol = useMemo(() => (prov === 'binance' ? mapSymbol('binance', symbol) : symbol), [prov, symbol]);
+  // const key = `${prov}|${subSymbol}`; // reservado para futuro uso
 
   // WS (agregador) si existe
   useEffect(() => {
-    subscribe(symbol, prov);
-    const id = window.setInterval(() => {
-      const arr = (ticks as Record<string, { price: number }[]>)[key] ?? [];
-      const last = arr.length ? arr[arr.length - 1].price : null;
-      setWsPrice(last != null && Number.isFinite(last) ? last : null);
-    }, 800);
-    return () => { window.clearInterval(id); unsubscribe(symbol, prov); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [symbol, prov]);
+    // no-op: reservamos el efecto para no romper reglas de hooks
+  }, [subSymbol, prov]);
 
   // Direct WS (se invoca siempre para no violar reglas de hooks)
   const klass = classifySymbol(symbol);
-  const binanceSym = useMemo(() => symbol.replace(/[-/]/g, ""), [symbol]);
+  const binanceSym = useMemo(() => mapSymbol('binance', symbol), [symbol]);
   const directBinance = useDirectRealtime(binanceSym, "binance");
   const directFinnhub = useDirectRealtime(symbol, "finnhub");
   const directPrice = useMemo(() => (
@@ -41,8 +35,8 @@ export function useLivePrice(symbol: string, provider?: StreamProvider) {
   ), [prov, klass, directBinance.price, directFinnhub.price]);
 
   // Polling ligero (histórico: Yahoo/Binance)
-  const marketProvider: 'yahoo' | 'binance' = prov === 'binance' ? 'binance' : 'yahoo';
-  const { lastPrice } = useLiveMarket({ symbol, tf: "5m", provider: marketProvider, refreshMs: 5_000 });
+  // Modo local: usar Yahoo también para el polling de precio
+  const { lastPrice } = useLiveMarket({ symbol, tf: "5m", provider: 'yahoo', refreshMs: 5_000 });
 
   const price = useMemo(() => wsPrice ?? directPrice ?? lastPrice ?? null, [wsPrice, directPrice, lastPrice]);
   return { price, provider: prov } as const;

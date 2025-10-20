@@ -44,8 +44,21 @@ export function mapSymbol(provider: Provider, raw: string): string {
     return s;
   }
   if (provider === "yahoo") {
-    // Yahoo: acepta AAPL, SPY, BTC-USD, EURUSD=X; normalizamos separador
-    return raw.replace("/", "-");
+    const s0 = raw.replace("/", "-").toUpperCase();
+    const cryptoBase = "(BTC|ETH|SOL|ADA|XRP|DOGE|BNB|TRX|MATIC|DOT|AVAX|SHIB|LTC|UNI|LINK|NEAR|ATOM|ETC|OP|ARB|TON|BCH|APT|FIL|ALGO|AAVE|SUI|SEI|PEPE)";
+    const reUsdt = new RegExp(`^${cryptoBase}[-_]?USDT$`);
+    const reUsd = new RegExp(`^${cryptoBase}[-_]?USD$`);
+    const reBaseOnly = new RegExp(`^${cryptoBase}$`);
+    if (reUsdt.test(s0)) return s0.replace(/[-_]?USDT$/, "-USD");
+    if (reUsd.test(s0)) return s0.includes("-") ? s0 : s0.replace(/USD$/, "-USD");
+    if (reBaseOnly.test(s0)) return `${s0}-USD`;
+
+    if (/^[A-Z]{3}-[A-Z]{3}$/.test(s0)) return s0.replace("-", "") + "=X";
+    const fx = s0.match(/^([A-Z]{3})([A-Z]{3})$/);
+    if (fx) return `${fx[1]}${fx[2]}=X`;
+
+    if (/^[A-Z]+[-_]?(USD)$/.test(s0)) return s0.includes("-") ? s0 : s0.replace(/USD$/, "-USD");
+    return s0;
   }
   // Finnhub: dejamos tal cual (puede incluir namespace)
   return raw;

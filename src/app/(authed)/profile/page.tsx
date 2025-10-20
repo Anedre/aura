@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { getSession, logout } from "@/lib/auth";
 import SymbolAvatar from "@/components/SymbolAvatar";
 import { getAssetMeta } from "@/lib/assets.meta";
+import { classifySymbol } from "@/lib/market";
 import { notify } from "@/lib/notify";
 
 type Sess = {
@@ -140,6 +141,7 @@ export default function ProfilePage() {
   const [prefClass, setPrefClass] = useState<"all"|"crypto"|"forex"|"equity"|"etf"|"index">('all');
   const [showFavPicker, setShowFavPicker] = useState(false);
   const [favQuery, setFavQuery] = useState("");
+  const [favHighlight, setFavHighlight] = useState<number>(-1);
   const SUGGESTIONS: string[] = [
     "BTC-USD","ETH-USD","LTC-USD","LINK-USD","ADA-USD","SOL-USD","DOGE-USD","XRP-USD","BNB-USD",
     "SPY","QQQ","TLT","GLD","DIA","IWM","EEM","HYG","XLK","XLE","XLF","XLV","XLY","XLI","XLP","XLB","XLU",
@@ -336,7 +338,7 @@ export default function ProfilePage() {
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-10">
+      <div className="mx-auto flex max-w-5xl flex-col gap-8 px-3 sm:px-6 py-6 sm:py-10">
         <header className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-background p-8 shadow-xl">
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             <div className="space-y-4">
@@ -466,33 +468,55 @@ export default function ProfilePage() {
                     className="input w-full"
                     placeholder="Escribe un símbolo (ej. BTC-USD, AAPL, EURUSD=X)"
                     value={favQuery}
-                    onChange={(e) => setFavQuery(e.target.value)}
+                    onChange={(e) => { setFavQuery(e.target.value); setFavHighlight(-1); }}
                     onKeyDown={(e) => {
+                      const q = favQuery.trim().toUpperCase();
+                      const filtered = SUGGESTIONS.filter(s => s.toUpperCase().includes(q));
                       if (e.key === 'Enter') {
-                        const q = favQuery.trim().toUpperCase();
-                        const matches = SUGGESTIONS.filter(s => s.includes(q));
-                        const pick = (matches[0] ?? q);
+                        const idx = favHighlight >= 0 && favHighlight < filtered.length ? favHighlight : 0;
+                        const pick = (filtered[idx] ?? q);
                         setFav(pick); saveFav(); setShowFavPicker(false);
                       } else if (e.key === 'Escape') { setShowFavPicker(false); }
+                      else if (e.key === 'ArrowDown') { e.preventDefault(); setFavHighlight(h => Math.min((h < 0 ? -1 : h) + 1, filtered.length - 1)); }
+                      else if (e.key === 'ArrowUp') { e.preventDefault(); setFavHighlight(h => Math.max((h < 0 ? filtered.length : h) - 1, 0)); }
                     }}
                   />
                   <div className="mt-2 max-h-72 overflow-auto">
-                    {(SUGGESTIONS.filter(s => s.toLowerCase().includes(favQuery.toLowerCase())).slice(0, 25)).map((s) => {
-                      const m = getAssetMeta(s);
-                      return (
-                        <button
-                          key={s}
-                          className={`w-full text-left px-3 py-2 rounded hover:bg-white/10 ${s===fav? 'bg-white/5':''}`}
-                          onClick={() => { setFav(s); saveFav(); setShowFavPicker(false); }}
-                        >
-                          <span className="inline-flex items-center gap-2">
-                            <SymbolAvatar symbol={s} size={18} />
-                            <span className="font-medium">{s}</span>
-                            {m?.name && <span className="opacity-70 text-xs">{m.name}</span>}
-                          </span>
-                        </button>
-                      );
-                    })}
+                    {(() => {
+                      const q = favQuery.trim().toUpperCase();
+                      const list = SUGGESTIONS.filter(s => s.toUpperCase().includes(q)).slice(0, 40);
+                      const groups: Record<string, string[]> = { crypto: [], equity: [], etf: [], forex: [], index: [], other: [] };
+                      for (const s of list) { groups[classifySymbol(s)]?.push(s); }
+                      const order: Array<keyof typeof groups> = ['crypto','equity','etf','forex','index','other'];
+                      const labels: Record<string,string> = { crypto: 'Cripto', equity: 'Acciones', etf: 'ETF', forex: 'Forex', index: 'Índices', other: 'Otros' };
+                      const flat: Array<{k:string; s:string}> = [];
+                      order.forEach(k => { groups[k].forEach(s => flat.push({k, s})); });
+                      if (flat.length === 0) return (<div className="px-3 py-2 text-sm opacity-70">Sin resultados</div>);
+                      return flat.map((row, i) => {
+                        const s = row.s; const m = getAssetMeta(s);
+                        const showHeader = i === 0 || flat[i-1].k !== row.k;
+                        const active = i === favHighlight;
+                        return (
+                          <div key={`${row.k}-${s}`}>
+                            {showHeader && (
+                              <div className="px-3 py-1 text-xs uppercase tracking-wide opacity-60">{labels[row.k] ?? row.k}</div>
+                            )}
+                            <button
+                              className={`w-full text-left px-3 py-2 rounded-lg transition ${active ? 'bg-white/15' : 'hover:bg-white/15'} ${s===fav? 'ring-1 ring-white/10 bg-white/10':''}`}
+                              onMouseEnter={() => setFavHighlight(i)}
+                              onFocus={() => setFavHighlight(i)}
+                              onClick={() => { setFav(s); saveFav(); setShowFavPicker(false); }}
+                            >
+                              <span className="inline-flex items-center gap-2">
+                                <SymbolAvatar symbol={s} size={18} />
+                                <span className="font-medium">{s}</span>
+                                {m?.name && <span className="opacity-70 text-xs">{m.name}</span>}
+                              </span>
+                            </button>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                   <div className="flex items-center justify-between mt-3 text-xs opacity-60">
                     <span>Enter: seleccionar</span>

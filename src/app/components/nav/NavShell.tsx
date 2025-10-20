@@ -5,21 +5,21 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { getSession, logout } from "@/lib/auth";
+import BottomNav from "@/app/components/nav/BottomNav";
+import { HomeIcon, FeedIcon, DemoIcon, RiskIcon, InvestIcon, SimIcon, UserIcon, MenuIcon, CloseIcon } from "@/app/components/nav/Icons";
 
 const ThemeToggle = dynamic(() => import("@/app/components/theme/ThemeToggle"), { ssr: false });
 
 type Item = { href: string; label: string; icon?: React.ReactNode; exact?: boolean };
 
 const NAV_ITEMS: Item[] = [
-      // dentro de NAV_ITEMS:
-
-  { href: "/home",  label: "Inicio",    icon: <span>🏠</span>, exact: true },
-  { href: "/feed",  label: "Feed",      icon: <span>📈</span> },
-  { href: "/paper", label: "Modo Demo",     icon: <span>🧪</span> },
-  { href: "/risk",          label: "Perfil riesgo",  icon: <span>🧭</span> },
-  { href: "/invest/request",label: "Solicitud",      icon: <span>📝</span> },
-  { href: "/simulator",     label: "Simulador",      icon: <span>📐</span> },
-  { href: "/profile", label: "Perfil",  icon: <span>👤</span> },
+  { href: "/home",  label: "Inicio",          icon: <HomeIcon />,  exact: true },
+  { href: "/feed",  label: "Feed",            icon: <FeedIcon /> },
+  { href: "/paper", label: "Modo Demo",       icon: <DemoIcon /> },
+  { href: "/risk",  label: "Perfil riesgo",   icon: <RiskIcon /> },
+  { href: "/invest/request", label: "Solicitud", icon: <InvestIcon /> },
+  { href: "/simulator",     label: "Simulador",  icon: <SimIcon /> },
+  { href: "/profile", label: "Perfil",        icon: <UserIcon /> },
 ];
 
 function isActive(path: string, item: Item) {
@@ -33,7 +33,6 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
   const [email, setEmail] = useState<string | null>(null);
   const [openMobile, setOpenMobile] = useState(false);
 
-  // hidratar sesión (correo si lo tienes en idToken decodificado—en MVP lo dejamos vacío)
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -46,7 +45,7 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
 
   async function doLogout() {
     await logout();
-    router.replace("/"); // vuelve al login
+    router.replace("/");
   }
 
   const items = useMemo(() => NAV_ITEMS, []);
@@ -56,9 +55,7 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
       {/* Sidebar desktop */}
       <aside className="hidden md:flex md:flex-col w-64 shrink-0 border-r border-[color:var(--border)] bg-[color:var(--muted)]">
         <div className="h-16 flex items-center px-4 border-b border-[color:var(--border)]">
-          <Link href="/home" className="font-extrabold tracking-tight text-lg">
-            AURA
-          </Link>
+          <Link href="/home" className="font-extrabold tracking-tight text-lg">AURA</Link>
         </div>
         <nav className="flex-1 p-2 space-y-1">
           {items.map((it) => {
@@ -67,8 +64,7 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={it.href}
                 href={it.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition
-                  ${active ? "bg-white/10" : "hover:bg-white/5"}`}
+                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition ${active ? "bg-white/15" : "hover:bg-white/10"}`}
                 onClick={() => setOpenMobile(false)}
               >
                 <span className="text-base">{it.icon}</span>
@@ -85,12 +81,12 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Contenido + header */}
+      {/* Content + header */}
       <div className="flex-1 flex flex-col">
         {/* Header mobile */}
         <header className="md:hidden h-14 flex items-center justify-between px-3 border-b border-[color:var(--border)] bg-[color:var(--muted)]">
           <button className="btn" onClick={() => setOpenMobile(v => !v)} aria-label="Abrir menú">
-            ☰
+            {openMobile ? <CloseIcon /> : <MenuIcon />}
           </button>
           <Link href="/home" className="font-bold">AURA</Link>
           <ThemeToggle />
@@ -103,7 +99,7 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
             <div className="absolute left-0 top-0 bottom-0 w-72 bg-[color:var(--muted)] border-r border-[color:var(--border)] p-3">
               <div className="h-12 flex items-center justify-between">
                 <Link href="/home" className="font-bold" onClick={() => setOpenMobile(false)}>AURA</Link>
-                <button className="btn" onClick={() => setOpenMobile(false)} aria-label="Cerrar">✕</button>
+                <button className="btn" onClick={() => setOpenMobile(false)} aria-label="Cerrar"><CloseIcon /></button>
               </div>
               <nav className="mt-2 space-y-1">
                 {items.map((it) => {
@@ -112,8 +108,7 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={it.href}
                       href={it.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-xl transition
-                        ${active ? "bg-white/10" : "hover:bg-white/5"}`}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-xl transition ${active ? "bg-white/15" : "hover:bg-white/10"}`}
                       onClick={() => setOpenMobile(false)}
                     >
                       <span className="text-base">{it.icon}</span>
@@ -132,8 +127,11 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
         )}
 
         {/* Main */}
-        <main className="flex-1 md:ml-0">{children}</main>
+        <main className="flex-1 md:ml-0 pb-16 md:pb-0">{children}</main>
+        {/* Mobile bottom nav */}
+        <BottomNav items={items} />
       </div>
     </div>
   );
 }
+

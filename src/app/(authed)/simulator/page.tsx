@@ -8,6 +8,8 @@ const MarketChartE = dynamic(() => import("@/components/MarketChartE"), { ssr: f
 import PriceTicker from "@/components/PriceTicker";
 import SymbolAvatar from "@/components/SymbolAvatar";
 import AssetHover from "@/components/AssetHover";
+// import RealtimePrice from "@/components/RealtimePrice";
+// import WsDebugStatus from "@/components/WsDebugStatus";
 
 import {
   simulateInvestment,
@@ -325,7 +327,7 @@ export default function SimulatorPage() {
   return (
     <main className="min-h-dvh bg-background text-foreground">
       {/* más ancho que 4xl para el layout con gráfico */}
-      <div className="max-w-[1200px] mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-[1200px] mx-auto px-3 sm:px-6 py-5 sm:py-8 space-y-5 sm:space-y-6">
         <header className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Simulador para empezar a invertir</h1>
@@ -346,7 +348,7 @@ export default function SimulatorPage() {
             no como proyección del modelo diario.
           </div>
         </div>
-
+        {/* WS Debug deshabilitado para modo 100% local */}
         {/* Presets rápidos */}
         <div className="flex flex-wrap gap-2">
           {PRESETS.map((p) => (
@@ -741,7 +743,6 @@ function RightChart({ symbol }: { symbol: string }) {
       </div>
       <MarketChartE
           symbol={symbol}
-          provider="auto"
           tf="5m"
           height={360}
           onPrice={setLast}
@@ -1166,3 +1167,4 @@ function TourModal({ onClose, onApplyExample, onUseBestFromFeed, onOpenFeedPicke
   );
 }
 */
+

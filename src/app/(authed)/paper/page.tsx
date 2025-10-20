@@ -285,13 +285,12 @@ export default function PaperPage() {
             <div className="card p-2 sm:p-3">
               <MarketChartE
                 symbol={symbol}
-                provider="auto"
                 tf="5m"
                 height={460}
                 onPrice={setMark}
                 baseline={breakeven ?? null}
                 showLastPrice
-                onRangeDelta={(d) => { setRangeDelta(d); }}
+                onRangeDelta={(d: number) => { setRangeDelta(d); }}
               />
             </div>
           </div>
@@ -370,6 +369,7 @@ export default function PaperPage() {
     </main>
   );
 }
+
 
 
 

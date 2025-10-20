@@ -319,7 +319,7 @@ export default function RiskPage() {
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
-      <div className="mx-auto flex max-w-6xl flex-col gap-10 px-6 py-10">
+      <div className="mx-auto flex max-w-6xl flex-col gap-8 px-3 sm:px-6 py-6 sm:py-10">
         <header className="flex flex-col gap-8 rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900/70 via-slate-900/30 to-background p-8 shadow-xl md:flex-row md:items-start md:justify-between">
           <div className="space-y-5">
             <span className="inline-flex items-center rounded-full border border-white/15 px-3 py-1 text-xs uppercase tracking-wide text-white/70">
