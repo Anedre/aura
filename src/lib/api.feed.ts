@@ -34,12 +34,29 @@ export interface Stops {
 export interface FeedItem {
   symbol: string;
   action: Action;
+  asset_type?: string;
+  model_kind?: string;
+  model_script?: string;
   p_conf?: number;                 // 0..1
+  p_up?: number;
+  p_up_mean?: number;
+  p_up_std?: number;
   sigma?: number;
   sigma_limit?: number | null;
+  thr_buy?: number;
+  thr_sell?: number;
+  thr_uncert?: number;
+  margin?: number;
+  quality?: number | string;
+  source?: string;
+  hold_reason?: string | null;
+  mc_passes?: number;
   horizon?: Horizon;
   ts?: string;                     // ISO
   last_close?: number;
+  atr14?: number;
+  ci_low?: number;
+  ci_high?: number;
   model_version?: string;
   abstain_reason?: string | null;
   stops?: Stops | null;            // ?? TIPO FUERTE (no {} ni unknown)

@@ -6,12 +6,26 @@ import Link from "next/link";
 import SymbolAvatar from "@/components/SymbolAvatar";
 import AssetHover from "@/components/AssetHover";
 import { getFeed, type FeedItem } from "@/lib/api.feed";
+import { deriveFromFeed } from "@/lib/feed-derive";
 import { loadRiskProfile } from "@/lib/invest";
 import { classifySymbol, type AssetClass, getSessionInfo } from "@/lib/market";
 
-type Horizon = "1d" | "1w";
+const HORIZON_OPTIONS = ["1d", "3d", "5d", "10d"] as const;
+const DEFAULT_HORIZON = HORIZON_OPTIONS[0];
+type Horizon = (typeof HORIZON_OPTIONS)[number];
 type ActionFilter = "ALL" | "BUY" | "SELL" | "HOLD" | "ABSTAIN";
 type SortKey = "conf" | "date";
+
+function coerceHorizon(value: string | null | undefined): Horizon {
+  if (!value) return DEFAULT_HORIZON;
+  const normalized = value.trim().toLowerCase();
+  for (const option of HORIZON_OPTIONS) {
+    if (option === normalized) {
+      return option;
+    }
+  }
+  return DEFAULT_HORIZON;
+}
 
 function cn(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -26,75 +40,140 @@ function actionLabel(a: FeedItem["action"]) {
 }
 
 function ActionBadge({ action }: { action: FeedItem["action"] }) {
-  const styles =
+  const badgeClasses =
     action === "BUY"
       ? "text-emerald-300 ring-emerald-500/30 bg-emerald-500/10"
       : action === "SELL"
-      ? "text-rose-300 ring-rose-500/30 bg-rose-500/10"
-      : action === "ABSTAIN"
-      ? "text-amber-300 ring-amber-500/30 bg-amber-500/10"
-      : "text-slate-300 ring-slate-500/30 bg-slate-500/10";
-  const explain = action === "BUY"
-    ? "Sube: mayor probabilidad de cierre al alza."
-    : action === "SELL"
-      ? "Baja: mayor probabilidad de cierre a la baja."
-      : action === "HOLD"
-        ? "En espera: no hay ventaja clara para operar."
-        : "Sin señal clara: información insuficiente o incertidumbre alta.";
+        ? "text-rose-300 ring-rose-500/30 bg-rose-500/10"
+        : action === "ABSTAIN"
+          ? "text-amber-300 ring-amber-500/30 bg-amber-500/10"
+          : "text-slate-300 ring-slate-500/30 bg-slate-500/10";
+  const explanation =
+    action === "BUY"
+      ? "Sube: el modelo detecta una oportunidad de compra para este periodo."
+      : action === "SELL"
+        ? "Baja: el modelo identifica presión bajista y sugiere reducir o vender."
+        : action === "HOLD"
+          ? "En espera: la señal es neutra, conviene observar sin entrar todavía."
+          : "Sin señal clara: la incertidumbre es alta; espera nuevos datos para decidir.";
   return (
     <span className="tooltip">
       <span
         className={cn(
           "px-2 py-0.5 rounded-full text-xs font-semibold tracking-wide ring-1 shadow-sm backdrop-blur",
-          styles,
+          badgeClasses,
         )}
       >
         {actionLabel(action)}
       </span>
-      <div role="tooltip" className="tooltip-panel"><div className="tooltip-title">¿Qué significa?</div><div className="tooltip-text">{explain}</div></div>
+      <div role="tooltip" className="tooltip-panel">
+        <div className="tooltip-title">¿Qué significa?</div>
+        <div className="tooltip-text">{explanation}</div>
+      </div>
     </span>
   );
 }
-
 function pct(a?: number, b?: number) {
   if (a == null || b == null || b === 0) return null;
   return (a / b - 1) * 100;
 }
 
-// ===== Helpers para derivar retorno/vol desde el feed (módulo) =====
-function ppy(h?: string): number {
-  if (!h) return 12;
-  if (h === "1d") return 252;
-  if (h === "1w") return 52;
-  if (h === "1h") return 252 * 6; // aprox sesiones
-  if (typeof h === "string" && h.endsWith("m")) {
-    const m = Number(h.replace("m", ""));
-    return m > 0 ? (12 * 60) / m : 12;
+const ACTION_THEME: Record<FeedItem["action"], { card: string; chip: string; text: string }> = {
+  BUY: {
+    card: "border-emerald-400/40 bg-emerald-500/5",
+    chip: "bg-emerald-500/15 text-emerald-200",
+    text: "text-emerald-100",
+  },
+  SELL: {
+    card: "border-rose-400/40 bg-rose-500/5",
+    chip: "bg-rose-500/15 text-rose-200",
+    text: "text-rose-100",
+  },
+  HOLD: {
+    card: "border-slate-400/40 bg-slate-500/5",
+    chip: "bg-slate-500/15 text-slate-200",
+    text: "text-slate-100",
+  },
+  ABSTAIN: {
+    card: "border-amber-400/40 bg-amber-500/5",
+    chip: "bg-amber-500/15 text-amber-100",
+    text: "text-amber-100",
+  },
+};
+
+function formatHorizonLabel(value?: string | null): string {
+  if (!value) return "Próximo cierre (1 día)";
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return "Próximo cierre (1 día)";
+  const lower = trimmed.toLowerCase();
+  const direct: Record<string, string> = {
+    "1d": "Próximo cierre (1 día)",
+    "3d": "Próximos 3 días",
+    "5d": "Próximos 5 días",
+    "10d": "Próximos 10 días",
+    "1w": "Próximas semanas",
+    "1h": "Próxima hora",
+  };
+  if (direct[lower]) return direct[lower];
+  const match = /^([0-9]+)([a-z]+)$/.exec(lower);
+  if (match) {
+    const amount = Number(match[1]);
+    const unit = match[2];
+    if (Number.isFinite(amount)) {
+      if (unit === "d") return amount === 1 ? "Próximo cierre (1 día)" : `Próximos ${amount} días`;
+      if (unit === "w") return amount === 1 ? "Próxima semana" : `Próximas ${amount} semanas`;
+      if (unit === "h") return amount === 1 ? "Próxima hora" : `Próximas ${amount} horas`;
+    }
   }
-  return 12;
+  return `Horizonte ${trimmed}`;
 }
-function annualize(mu_h: number, n: number) { return Math.pow(1 + mu_h, Math.max(1, n)) - 1; }
-function annualizeVol(s_h: number, n: number) { return s_h * Math.sqrt(Math.max(1, n)); }
-export function deriveFromFeed(item: FeedItem): { muA: number; sigA: number } | null {
-  const conf = typeof item.p_conf === "number" ? Math.max(0, Math.min(1, item.p_conf)) : 0.5;
-  const n = ppy(item.horizon as string | undefined);
-  const px = item.last_close ?? null;
-  let mu_h = 0; let sig_h: number | null = null;
-  if (typeof item.sigma === "number" && isFinite(item.sigma)) sig_h = Math.max(0, item.sigma);
-  if (px && item.stops && typeof item.stops.tp === "number" && typeof item.stops.sl === "number") {
-    const rTp = item.stops.tp / px - 1; const rSl = item.stops.sl / px - 1;
-    if (item.action === "BUY") mu_h = conf * rTp + (1 - conf) * rSl;
-    else if (item.action === "SELL") mu_h = conf * (-Math.abs(rSl)) + (1 - conf) * Math.abs(rTp);
-    else mu_h = conf * rTp + (1 - conf) * rSl;
-    if (sig_h == null) sig_h = (Math.abs(rTp) + Math.abs(rSl)) / 2;
-  } else {
-    const base = 0.01; // heurística educativa
-    if (item.action === "BUY") mu_h = conf * base;
-    else if (item.action === "SELL") mu_h = -conf * base;
-    else mu_h = 0;
-    if (sig_h == null) sig_h = 0.02;
+
+function humanizeReason(reason?: string | null): string | null {
+  if (!reason) return null;
+  const cleaned = reason.toString().replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!cleaned) return null;
+  const lower = cleaned.toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+function fmtNumber(value?: number | null, digits = 2): string {
+  if (typeof value !== "number" || !Number.isFinite(value)) return "-";
+  return value.toLocaleString("es-MX", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function buildActionExplanation(item: FeedItem, horizonLabel: string, confidencePct: number): string {
+  const confidenceText = confidencePct > 0 ? `${confidencePct}%` : "un nivel moderado";
+  const reasonText = humanizeReason(item.hold_reason ?? item.abstain_reason ?? null);
+  const stopsText = item.stops && typeof item.stops.tp === "number" && typeof item.stops.sl === "number"
+    ? `Sugiere tomar utilidades cerca de ${fmtNumber(item.stops.tp, 2)} y proteger la operación si llega a ${fmtNumber(item.stops.sl, 2)}.`
+    : null;
+
+  if (item.action === "BUY") {
+    return [
+      `El modelo estima ${confidenceText} de probabilidad de que el precio suba en ${horizonLabel}, por eso recomienda comprar.`,
+      stopsText ?? "Considera definir tus propios niveles de salida antes de entrar.",
+    ].join(" ");
   }
-  return { muA: annualize(mu_h, n), sigA: annualizeVol(sig_h ?? 0.02, n) };
+
+  if (item.action === "SELL") {
+    return [
+      `El modelo detecta presión bajista para ${item.symbol}: calcula ${confidenceText} de probabilidad de que el precio caiga en ${horizonLabel}, por lo que sugiere vender o cubrir la posición.`,
+      stopsText ?? "Si ya tienes el activo, puedes fijar tus propios niveles de salida para limitar la pérdida.",
+    ].join(" ");
+  }
+
+  if (item.action === "HOLD") {
+    const neutral = `La probabilidad de subir o bajar está muy pareja (aprox. ${confidenceText}), así que conviene esperar una señal más clara en ${horizonLabel}.`;
+    const extra = reasonText ? `Motivo adicional del modelo: ${reasonText}.` : "Usa este tiempo para revisar tu plan o seguir monitorizando el mercado.";
+    return `${neutral} ${extra}`;
+  }
+
+  const uncertain = `La señal para ${item.symbol} es incierta: los datos actuales no permiten una decisión confiable para ${horizonLabel}.`;
+  const extra = reasonText ? `Motivo detectado: ${reasonText}.` : "Lo ideal es esperar nueva información antes de operar.";
+  return `${uncertain} ${extra}`;
 }
 
 function Card({ item }: { item: FeedItem }) {
@@ -110,53 +189,79 @@ function Card({ item }: { item: FeedItem }) {
   const session = useMemo(() => getSessionInfo(item.symbol), [item.symbol]);
   const classLabel = useMemo(() => {
     const c = classifySymbol(item.symbol);
-    return c === 'crypto' ? 'Cripto' : c === 'equity' ? 'Acción' : c === 'etf' ? 'ETF' : c === 'forex' ? 'Forex' : c === 'index' ? 'Índice' : 'Otro';
+    return c === "crypto"
+      ? "Cripto"
+      : c === "equity"
+        ? "Acción"
+        : c === "etf"
+          ? "ETF"
+          : c === "forex"
+            ? "Forex"
+            : c === "index"
+              ? "Índice"
+              : "Otro";
   }, [item.symbol]);
 
+  const sessionChip = session
+    ? (() => {
+        if (session.is24x7) return "24/7";
+        const parts: string[] = [session.isOpen ? "Abierto" : "Cerrado"];
+        const next = session.isOpen ? session.nextCloseLocal : session.nextOpenLocal;
+        if (next) {
+          parts.push(`${session.isOpen ? "cierra" : "abre"} ${next}`);
+        }
+        return parts.join(" · ");
+      })()
+    : null;
+
+  const theme = ACTION_THEME[item.action];
+  const horizonLabel = formatHorizonLabel(item.horizon);
+  const explanation = buildActionExplanation(item, horizonLabel, confPct);
+
   return (
-    <article className={cn(
-      "rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.06]",
-      "shadow-lg shadow-black/30 transition-colors duration-200 transform-gpu hover:-translate-y-0.5 fade-in-up"
-    )}>
+    <article
+      className={cn(
+        "rounded-2xl border shadow-lg shadow-black/30 transition-colors duration-200 transform-gpu hover:-translate-y-0.5 fade-in-up backdrop-blur",
+        theme.card,
+      )}
+    >
       <div className="p-5">
         <header className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <h3 className="text-lg font-semibold tracking-wide">
               <Link href={`/asset/${item.symbol}`} className="hover:underline flex items-center gap-2">
                 <SymbolAvatar symbol={item.symbol} size={20} />
-                <AssetHover symbol={item.symbol}><span>{item.symbol}</span></AssetHover>
+                <AssetHover symbol={item.symbol}>
+                  <span>{item.symbol}</span>
+                </AssetHover>
               </Link>
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <ActionBadge action={item.action} />
-              <span className="chip">{classLabel}</span>
-              {session && (
-                session.is24x7 ? (
-                  <span className="chip">24/7</span>
-                ) : (
-                  <span className="chip">{session.isOpen ? 'Abierto' : 'Cerrado'} · {session.isOpen ? (session.nextCloseLocal ? `cierra ${session.nextCloseLocal}` : '') : (session.nextOpenLocal ? `abre ${session.nextOpenLocal}` : '')}</span>
-                )
-              )}
+              <span className={cn("chip", theme.chip)}>{classLabel}</span>
+              {sessionChip ? <span className="chip">{sessionChip}</span> : null}
             </div>
           </div>
           <time className="text-xs opacity-70">{safeDate}</time>
         </header>
 
+        <p className={cn("text-sm leading-relaxed mt-3", theme.text)}>{explanation}</p>
+
         <div className="mt-4 grid grid-cols-2 gap-x-8 gap-y-2 text-sm">
           <div>
             <span className="opacity-70">Periodo: </span>
-            Próximo cierre (1 día)
+            {horizonLabel}
           </div>
           {hasStops ? (
             <>
               <div>
                 <span className="opacity-70">Meta de ganancia: </span>
-                {item.stops!.tp.toFixed(4)}
+                {fmtNumber(item.stops!.tp, 4)}
                 {rTp != null ? <span className="opacity-60"> ({rTp.toFixed(2)}%)</span> : null}
               </div>
               <div>
                 <span className="opacity-70">Piso de protección: </span>
-                {item.stops!.sl.toFixed(4)}
+                {fmtNumber(item.stops!.sl, 4)}
                 {rSl != null ? <span className="opacity-60"> ({rSl.toFixed(2)}%)</span> : null}
               </div>
             </>
@@ -168,16 +273,21 @@ function Card({ item }: { item: FeedItem }) {
 
           {item.action === "ABSTAIN" ? (
             <div className="col-span-2 text-amber-300/90 text-xs">
-              La señal aún no es clara.
+              La señal aún no es clara; espera más información.
             </div>
           ) : null}
         </div>
 
-        {/* Nivel de certeza */}
         <div className="mt-4">
           <div className="flex items-center justify-between text-xs mb-1">
-            <span className="opacity-70 tooltip">Nivel de certeza
-              <span className="tooltip-panel"><div className="tooltip-title">¿Qué es?</div><div className="tooltip-text">Probabilidad central de que el próximo cierre suba. 50% es neutro.</div></span>
+            <span className="opacity-70 tooltip">
+              Nivel de certeza
+              <span className="tooltip-panel">
+                <div className="tooltip-title">¿Qué es?</div>
+                <div className="tooltip-text">
+                  Probabilidad central de que el próximo cierre suba. 50% es neutro.
+                </div>
+              </span>
             </span>
             <span className="font-medium">{confPct}%</span>
           </div>
@@ -188,25 +298,33 @@ function Card({ item }: { item: FeedItem }) {
                 item.action === "BUY"
                   ? "bg-emerald-500"
                   : item.action === "SELL"
-                  ? "bg-rose-500"
-                  : item.action === "ABSTAIN"
-                  ? "bg-amber-500"
-                  : "bg-slate-500",
+                    ? "bg-rose-500"
+                    : item.action === "ABSTAIN"
+                      ? "bg-amber-500"
+                      : "bg-slate-500",
               )}
               style={{ width: `${confPct}%` }}
             />
           </div>
-          <div className="mt-1 text-[11px] opacity-70">Referencia: 50% ≈ neutral, valores altos = mayor confianza.</div>
+          <div className="mt-1 text-[11px] opacity-70">
+            Referencia: 50% es neutral, valores altos implican más confianza.
+          </div>
         </div>
 
         {derived && (
-          <div className="mt-4 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-xs">
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-xs">
             <div className="opacity-80">
-              <div>Retorno anual derivado: <span className="font-semibold">{(derived.muA * 100).toFixed(1)}%</span></div>
-              <div>Volatilidad anual derivada: <span className="font-semibold">{(derived.sigA * 100).toFixed(1)}%</span></div>
+              <div>
+                Retorno anual derivado: {" "}
+                <span className="font-semibold">{(derived.muA * 100).toFixed(1)}%</span>
+              </div>
+              <div>
+                Volatilidad anual derivada: {" "}
+                <span className="font-semibold">{(derived.sigA * 100).toFixed(1)}%</span>
+              </div>
             </div>
             <Link
-              href={`/simulator?symbol=${encodeURIComponent(item.symbol)}&mu=${(derived.muA).toFixed(6)}&sigma=${(derived.sigA).toFixed(6)}&months=12`}
+              href={`/simulator?symbol=${encodeURIComponent(item.symbol)}&mu=${derived.muA.toFixed(6)}&sigma=${derived.sigA.toFixed(6)}&months=12`}
               className="btn btn-primary"
               title="Abrir el simulador con estos parámetros"
             >
@@ -243,7 +361,7 @@ function FeedInner() {
   const [data, setData] = useState<FeedItem[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const [horizon, setHorizon] = useState<Horizon>("1d");
+  const [horizon, setHorizon] = useState<Horizon>(DEFAULT_HORIZON);
   const [minConf, setMinConf] = useState<number>(0.60); // valor amigable por defecto
   const [action, setAction] = useState<ActionFilter>("ALL");
   const [q, setQ] = useState<string>("");
@@ -256,16 +374,14 @@ function FeedInner() {
 
   // 1) Inicializa desde URL (si hay)
   useEffect(() => {
-    const h =
-      (searchParams.get("h") as Horizon | null) ??
-      (searchParams.get("horizon") as Horizon | null);
+    const rawH = searchParams.get("h") ?? searchParams.get("horizon");
     const m = searchParams.get("m") ?? searchParams.get("min_conf");
     const a = searchParams.get("a") as ActionFilter | null;
     const s = searchParams.get("s") as SortKey | null;
     const qq = searchParams.get("q");
     const os = searchParams.get("stops");
 
-    if (h) setHorizon(h);
+    if (rawH) setHorizon(coerceHorizon(rawH));
     if (m) setMinConf(Number(m) / (m.includes(".") ? 1 : 100));
     if (a) setAction(a);
     if (s) setSort(s);
@@ -287,8 +403,8 @@ function FeedInner() {
 
     const prof = loadRiskProfile()?.profile;
     if (prof === "Conservador") { setHorizon("1d"); setMinConf(0.65); }
-    else if (prof === "Agresivo") { setHorizon("1d"); setMinConf(0.55); }
-    else { setHorizon("1d"); setMinConf(0.60); } // Moderado/por defecto
+    else if (prof === "Agresivo") { setHorizon("5d"); setMinConf(0.55); }
+    else { setHorizon("3d"); setMinConf(0.60); } // Moderado/por defecto
 
     initDone.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -334,6 +450,7 @@ function FeedInner() {
   const filtered: FeedItem[] = useMemo(() => {
     if (!Array.isArray(data)) return [];
     const f = data.filter((d) => {
+      const itemHorizon = typeof d.horizon === "string" ? coerceHorizon(d.horizon) : DEFAULT_HORIZON;
       const passConf = (d.p_conf ?? 0) >= minConf;
       const passAct = action === "ALL" ? true : d.action === action;
       const passStops = onlyStops
@@ -341,7 +458,8 @@ function FeedInner() {
         : true;
       const passQ = q ? d.symbol.toLowerCase().includes(q.toLowerCase()) : true;
       const passClass = classFilter === 'all' ? true : classifySymbol(d.symbol) === classFilter;
-      return passConf && passAct && passStops && passQ && passClass;
+      const passHz = itemHorizon === horizon;
+      return passConf && passAct && passStops && passQ && passClass && passHz;
     });
     const sorted = [...f].sort((a, b) => {
       if (sort === "conf") return (b.p_conf ?? 0) - (a.p_conf ?? 0);
@@ -350,7 +468,7 @@ function FeedInner() {
       return 0;
     });
     return sorted;
-  }, [data, minConf, action, onlyStops, q, sort, classFilter]);
+  }, [data, minConf, action, onlyStops, q, sort, classFilter, horizon]);
 
   const counts = useMemo(() => {
     const base: Record<FeedItem["action"], number> = { BUY: 0, SELL: 0, ABSTAIN: 0, HOLD: 0 };
@@ -425,11 +543,14 @@ function FeedInner() {
             <label className="text-sm opacity-80">Periodo</label>
             <select
               value={horizon}
-              onChange={(e) => setHorizon(e.target.value as Horizon)}
+              onChange={(e) => setHorizon(coerceHorizon(e.target.value))}
               className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm"
             >
-              <option value="1d">Próximos días</option>
-              <option value="1w">Próximas semanas</option>
+              {HORIZON_OPTIONS.map((hz) => (
+                <option key={hz} value={hz}>
+                  {formatHorizonLabel(hz)}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -519,8 +640,8 @@ function FeedInner() {
               onClick={() => {
                 const prof = loadRiskProfile()?.profile;
                 if (prof === "Conservador") { setHorizon("1d"); setMinConf(0.65); }
-                else if (prof === "Agresivo") { setHorizon("1w"); setMinConf(0.55); }
-                else { setHorizon("1d"); setMinConf(0.60); }
+                else if (prof === "Agresivo") { setHorizon("5d"); setMinConf(0.55); }
+                else { setHorizon("3d"); setMinConf(0.60); }
                 setAction("ALL"); setOnlyStops(false); setQ(""); setSort("conf");
               }}
               className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/15 border border-white/10 text-sm"
