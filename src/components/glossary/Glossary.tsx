@@ -89,6 +89,18 @@ export const GLOSSARY: Record<string, GlossaryEntry> = {
     applies: "Permite diversificar con una sola compra.",
     relates: ["índice", "riesgo"],
   },
+  "paper trading": {
+    term: "Paper trading",
+    short: "Simulación con dinero virtual para practicar sin arriesgar capital real.",
+    applies: "Sirve para probar estrategias y ganar confianza antes de invertir.",
+    relates: ["simulador", "riesgo"],
+  },
+  "pnl": {
+    term: "PnL (Profit and Loss)",
+    short: "Resultado neto de tus operaciones: ganancias menos pérdidas.",
+    applies: "Permite evaluar si tu estrategia está generando valor.",
+    relates: ["paper trading", "riesgo"],
+  },
 };
 
 export function TechTerm({ term, label }: { term: string; label?: string }) {

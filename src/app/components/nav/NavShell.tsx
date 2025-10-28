@@ -1,25 +1,35 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { getSession, logout } from "@/lib/auth";
 import BottomNav from "@/app/components/nav/BottomNav";
-import { HomeIcon, FeedIcon, DemoIcon, RiskIcon, InvestIcon, SimIcon, UserIcon, MenuIcon, CloseIcon } from "@/app/components/nav/Icons";
+import {
+  HomeIcon,
+  FeedIcon,
+  DemoIcon,
+  RiskIcon,
+  InvestIcon,
+  SimIcon,
+  UserIcon,
+  MenuIcon,
+  CloseIcon,
+} from "@/app/components/nav/Icons";
 
 const ThemeToggle = dynamic(() => import("@/app/components/theme/ThemeToggle"), { ssr: false });
 
 type Item = { href: string; label: string; icon?: React.ReactNode; exact?: boolean };
 
 const NAV_ITEMS: Item[] = [
-  { href: "/home",  label: "Inicio",          icon: <HomeIcon />,  exact: true },
-  { href: "/feed",  label: "Feed",            icon: <FeedIcon /> },
-  { href: "/paper", label: "Modo Demo",       icon: <DemoIcon /> },
-  { href: "/risk",  label: "Perfil riesgo",   icon: <RiskIcon /> },
+  { href: "/home", label: "Inicio", icon: <HomeIcon />, exact: true },
+  { href: "/feed", label: "Feed", icon: <FeedIcon /> },
+  { href: "/paper", label: "Modo Demo", icon: <DemoIcon /> },
+  { href: "/risk", label: "Perfil riesgo", icon: <RiskIcon /> },
   { href: "/invest/request", label: "Solicitud", icon: <InvestIcon /> },
-  { href: "/simulator",     label: "Simulador",  icon: <SimIcon /> },
-  { href: "/profile", label: "Perfil",        icon: <UserIcon /> },
+  { href: "/simulator", label: "Simulador", icon: <SimIcon /> },
+  { href: "/profile", label: "Perfil", icon: <UserIcon /> },
 ];
 
 function isActive(path: string, item: Item) {
@@ -27,21 +37,69 @@ function isActive(path: string, item: Item) {
   return path === item.href || path.startsWith(item.href + "/");
 }
 
+function NavList({
+  items,
+  pathname,
+  onNavigate,
+}: {
+  items: Item[];
+  pathname: string;
+  onNavigate?: () => void;
+}) {
+  return (
+    <nav className="flex-1 space-y-1">
+      {items.map((item) => {
+        const active = isActive(pathname, item);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
+              active ? "bg-white/15" : "hover:bg-white/10"
+            }`}
+            aria-current={active ? "page" : undefined}
+          >
+            <span className="text-base">{item.icon}</span>
+            <span>{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
 export default function NavShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
-  const [openMobile, setOpenMobile] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    let alive = true;
+    let mounted = true;
     (async () => {
-      const sess = await getSession();
-      if (!alive) return;
-      setEmail(sess?.email || null);
+      const session = await getSession();
+      if (!mounted) return;
+      setEmail(session?.email ?? null);
     })();
-    return () => { alive = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    setMobileOpen(false);
+  }, [pathname]);
 
   async function doLogout() {
     await logout();
@@ -51,86 +109,67 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
   const items = useMemo(() => NAV_ITEMS, []);
 
   return (
-    <div className="min-h-dvh flex">
-      {/* Sidebar desktop */}
-      <aside className="hidden md:flex md:flex-col w-64 shrink-0 border-r border-[color:var(--border)] bg-[color:var(--muted)]">
-        <div className="h-16 flex items-center px-4 border-b border-[color:var(--border)]">
-          <Link href="/home" className="font-extrabold tracking-tight text-lg">AURA</Link>
-        </div>
-        <nav className="flex-1 p-2 space-y-1">
-          {items.map((it) => {
-            const active = isActive(pathname, it);
-            return (
-              <Link
-                key={it.href}
-                href={it.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-xl transition ${active ? "bg-white/15" : "hover:bg-white/10"}`}
-                onClick={() => setOpenMobile(false)}
-              >
-                <span className="text-base">{it.icon}</span>
-                <span className="text-sm">{it.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="p-3 border-t border-[color:var(--border)] space-y-2">
-          <ThemeToggle className="w-full" />
-          <button className="btn w-full" onClick={doLogout}>Salir</button>
-          <div className="text-xs opacity-60 truncate">{email ?? "Usuario AURA"}</div>
-        </div>
-      </aside>
-
-      {/* Content + header */}
-      <div className="flex-1 flex flex-col">
-        {/* Header mobile */}
-        <header className="md:hidden h-14 flex items-center justify-between px-3 border-b border-[color:var(--border)] bg-[color:var(--muted)]">
-          <button className="btn" onClick={() => setOpenMobile(v => !v)} aria-label="Abrir menú">
-            {openMobile ? <CloseIcon /> : <MenuIcon />}
+    <div className="min-h-dvh flex flex-col bg-[color:var(--background)] text-[color:var(--foreground)]">
+      <header className="h-14 sm:h-16 border-b border-[color:var(--border)] bg-[color:var(--muted)] px-3 sm:px-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
+            onClick={() => setMobileOpen((value) => !value)}
+          >
+            {mobileOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
-          <Link href="/home" className="font-bold">AURA</Link>
-          <ThemeToggle />
-        </header>
+          <Link href="/home" className="text-base font-semibold tracking-tight sm:text-lg">
+            AURA
+          </Link>
+        </div>
+        <div className="flex items-center gap-2">
+          {email && <span className="hidden sm:inline text-xs opacity-70">{email}</span>}
+          <ThemeToggle className="btn-ghost btn-sm sm:btn" />
+        </div>
+      </header>
 
-        {/* Drawer mobile */}
-        {openMobile && (
-          <div className="md:hidden fixed inset-0 z-50" role="dialog" aria-modal="true">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setOpenMobile(false)} />
-            <div className="absolute left-0 top-0 bottom-0 w-72 bg-[color:var(--muted)] border-r border-[color:var(--border)] p-3">
-              <div className="h-12 flex items-center justify-between">
-                <Link href="/home" className="font-bold" onClick={() => setOpenMobile(false)}>AURA</Link>
-                <button className="btn" onClick={() => setOpenMobile(false)} aria-label="Cerrar"><CloseIcon /></button>
-              </div>
-              <nav className="mt-2 space-y-1">
-                {items.map((it) => {
-                  const active = isActive(pathname, it);
-                  return (
-                    <Link
-                      key={it.href}
-                      href={it.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-xl transition ${active ? "bg-white/15" : "hover:bg-white/10"}`}
-                      onClick={() => setOpenMobile(false)}
-                    >
-                      <span className="text-base">{it.icon}</span>
-                      <span className="text-sm">{it.label}</span>
-                    </Link>
-                  );
-                })}
-              </nav>
-              <div className="mt-4 space-y-2">
-                <ThemeToggle className="w-full" />
-                <button className="btn w-full" onClick={doLogout}>Salir</button>
-                <div className="text-xs opacity-60 truncate">{email ?? "Usuario AURA"}</div>
-              </div>
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
+          <div className="nav-drawer h-full w-[300px] max-w-[88vw] bg-[color:var(--muted)] border-r border-[color:var(--border)] px-4 py-4 flex flex-col gap-4 shadow-xl">
+            <div className="flex items-center justify-between">
+              <Link
+                href="/home"
+                className="text-base font-semibold"
+                onClick={() => setMobileOpen(false)}
+              >
+                AURA
+              </Link>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                aria-label="Cerrar menú"
+                onClick={() => setMobileOpen(false)}
+              >
+                <CloseIcon />
+              </button>
+            </div>
+            <NavList items={items} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+            <div className="space-y-2 border-t border-[color:var(--border)] pt-3">
+              <ThemeToggle className="w-full" />
+              <button type="button" className="btn w-full" onClick={doLogout}>
+                Salir
+              </button>
+              <div className="truncate text-xs opacity-60">{email ?? "Usuario AURA"}</div>
             </div>
           </div>
-        )}
+          <button
+            type="button"
+            className="nav-backdrop flex-1 bg-black/40"
+            aria-label="Cerrar menú"
+            onClick={() => setMobileOpen(false)}
+          />
+        </div>
+      )}
 
-        {/* Main */}
-        <main className="flex-1 md:ml-0 pb-16 md:pb-0">{children}</main>
-        {/* Mobile bottom nav */}
-        <BottomNav items={items} />
-      </div>
+      <main className="flex-1 pb-20 sm:pb-24">{children}</main>
+      <BottomNav items={items} />
     </div>
   );
 }

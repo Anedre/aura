@@ -2,54 +2,54 @@
 
 /* ======== Night Theme (default) ======== */
 :root {
-  --background: #0B0D12;
-  --foreground: #EAF0F6;
+  --background: #050713;
+  --foreground: #F5F8FF;
 
-  --primary:   #6366F1; /* Indigo */
-  --accent:    #10B981; /* Emerald */
+  --primary:   #7766FF;
+  --accent:    #36E0B8;
 
-  --muted:   #0F1318;
-  --card:    #0E1217;
-  --border:  #1F2937;
+  --muted:   #0A1024;
+  --card:    #101634;
+  --border:  #1E2A4A;
 
   /* Chart defaults (night) */
-  --chart-label: rgba(234, 240, 246, 0.72);
-  --chart-axis: rgba(234, 240, 246, 0.24);
-  --chart-grid: rgba(234, 240, 246, 0.08);
-  --chart-tooltip-bg: rgba(20, 20, 24, 0.94);
-  --chart-tooltip-fg: rgba(255, 255, 255, 0.92);
+  --chart-label: rgba(245, 248, 255, 0.78);
+  --chart-axis: rgba(175, 189, 232, 0.32);
+  --chart-grid: rgba(85, 112, 180, 0.16);
+  --chart-tooltip-bg: rgba(12, 16, 33, 0.96);
+  --chart-tooltip-fg: rgba(245, 248, 255, 0.96);
 
-  --ring:    #7C3AED80;
+  --ring:    #7766FF80;
   --success: #22C55E;
-  --warning: #F59E0B;
-  --danger:  #EF4444;
+  --warning: #FACC15;
+  --danger:  #F87171;
 
-  --aura-transition: 220ms;
+  --aura-transition: 260ms;
 }
 
 /* ======== Day Theme ======== */
 :root[data-theme="day"] {
-  --background: #F7F8FB;
-  --foreground: #0B1220;
+  --background: #F3F6FE;
+  --foreground: #0E1B3D;
 
-  --primary:   #4F46E5;
-  --accent:    #059669;
+  --primary:   #4D5DFF;
+  --accent:    #1BCFA1;
 
   --muted:   #FFFFFF;
   --card:    #FFFFFF;
-  --border:  #E5E7EB;
-  --ring:    #7C3AED66;
+  --border:  #D8E1FF;
+  --ring:    #4D5DFF44;
 
   --success: #16A34A;
-  --warning: #D97706;
-  --danger:  #DC2626;
+  --warning: #E19C35;
+  --danger:  #DC4D4D;
 
   /* Chart overrides (day) */
-  --chart-label: rgba(11, 18, 32, 0.70);
-  --chart-axis: rgba(11, 18, 32, 0.30);
-  --chart-grid: rgba(11, 18, 32, 0.10);
-  --chart-tooltip-bg: rgba(255, 255, 255, 0.96);
-  --chart-tooltip-fg: rgba(11, 18, 32, 0.95);
+  --chart-label: rgba(14, 27, 61, 0.72);
+  --chart-axis: rgba(14, 27, 61, 0.28);
+  --chart-grid: rgba(14, 27, 61, 0.12);
+  --chart-tooltip-bg: rgba(255, 255, 255, 0.98);
+  --chart-tooltip-fg: rgba(14, 27, 61, 0.95);
 }
 
 /* Tailwind v4 tokens */
@@ -70,61 +70,138 @@
 /* Respect OS preference when unset */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
-    --background: #F7F8FB;
-    --foreground: #0B1220;
-    --primary:   #4F46E5;
-    --accent:    #059669;
+    --background: #F3F6FE;
+    --foreground: #0E1B3D;
+    --primary:   #4D5DFF;
+    --accent:    #1BCFA1;
     --muted:   #FFFFFF;
     --card:    #FFFFFF;
-    --border:  #E5E7EB;
-    --ring:    #7C3AED66;
+    --border:  #D8E1FF;
+    --ring:    #4D5DFF44;
     --success: #16A34A;
-    --warning: #D97706;
-    --danger:  #DC2626;
+    --warning: #E19C35;
+    --danger:  #DC4D4D;
   }
 }
 
 /* Background with AURA radials */
 body {
   background:
-    radial-gradient(1200px 500px at 50% -100px, color-mix(in oklab, var(--primary) 20%, transparent), transparent 60%),
-    radial-gradient(800px 300px at 80% 0%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 60%),
-    var(--background);
+    radial-gradient(720px 420px at 20% -15%, color-mix(in oklab, var(--primary) 24%, transparent), transparent 65%),
+    radial-gradient(640px 360px at 88% 0%, color-mix(in oklab, var(--accent) 20%, transparent), transparent 72%),
+    linear-gradient(160deg, color-mix(in oklab, var(--background) 90%, #0f1733 10%), var(--background));
   color: var(--foreground);
   font-family: var(--font-sans);
   transition: background-color var(--aura-transition) ease, color var(--aura-transition) ease, background var(--aura-transition) ease;
 }
 
+:root[data-theme="day"] body {
+  background:
+    radial-gradient(640px 320px at 20% -18%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 64%),
+    radial-gradient(680px 420px at 92% -12%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 70%),
+    linear-gradient(160deg, color-mix(in oklab, var(--background) 92%, #ffffff 8%), var(--background));
+}
+
 /* ===== UI Primitives ===== */
-.card { @apply rounded-2xl border shadow; backdrop-filter: blur(6px); transition: background-color var(--aura-transition) ease, border-color var(--aura-transition) ease, color var(--aura-transition) ease; }
+.card {
+  @apply rounded-2xl border shadow;
+  backdrop-filter: blur(10px);
+  background: color-mix(in oklab, var(--card) 94%, transparent);
+  border-color: color-mix(in oklab, var(--border) 85%, transparent);
+  box-shadow: 0 24px 48px color-mix(in oklab, #000 12%, transparent);
+  transition: background-color var(--aura-transition) ease, border-color var(--aura-transition) ease, color var(--aura-transition) ease, box-shadow var(--aura-transition) ease;
+}
+:root[data-theme="day"] .card {
+  background: color-mix(in oklab, var(--card) 98%, transparent);
+  border-color: color-mix(in oklab, var(--border) 80%, transparent);
+  box-shadow: 0 18px 36px color-mix(in oklab, #41557d 12%, transparent);
+}
+
+.surface {
+  border-radius: 20px;
+  background: color-mix(in oklab, var(--card) 96%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 82%, transparent);
+  box-shadow: 0 18px 34px color-mix(in oklab, #000 10%, transparent);
+  color: var(--foreground);
+  transition: background var(--aura-transition) ease, border-color var(--aura-transition) ease, box-shadow var(--aura-transition) ease, color var(--aura-transition) ease;
+}
+:root[data-theme="day"] .surface {
+  background: color-mix(in oklab, var(--card) 99%, transparent);
+  border-color: color-mix(in oklab, var(--border) 78%, transparent);
+  box-shadow: 0 16px 30px color-mix(in oklab, #647099 14%, transparent);
+}
+
+.surface-muted {
+  border-radius: 18px;
+  background: color-mix(in oklab, var(--card) 90%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+}
+:root[data-theme="day"] .surface-muted {
+  background: color-mix(in oklab, var(--card) 96%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 68%, transparent);
+}
+
+.text-strong { color: color-mix(in oklab, var(--foreground) 96%, transparent); }
+.text-subtle { color: color-mix(in oklab, var(--foreground) 72%, transparent); }
+.text-faint   { color: color-mix(in oklab, var(--foreground) 55%, transparent); }
+.text-accent  { color: var(--accent); }
+.border-soft  { border-color: color-mix(in oklab, var(--border) 65%, transparent) !important; }
+.border-strong { border-color: color-mix(in oklab, var(--border) 85%, transparent) !important; }
 
 .input {
   @apply w-full rounded-xl px-3 py-2 outline-none transition;
-  background: color-mix(in oklab, white 5%, transparent);
-  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  background: color-mix(in oklab, var(--card) 88%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 75%, transparent);
   color: var(--foreground);
 }
-.input:focus { outline: 2px solid var(--ring); outline-offset: 2px; background: color-mix(in oklab, white 7%, transparent); }
+.input:focus { outline: 2px solid var(--ring); outline-offset: 2px; background: color-mix(in oklab, var(--card) 94%, transparent); }
 .input::placeholder { color: color-mix(in oklab, var(--foreground) 60%, transparent); opacity: .7; }
 
 .btn {
   @apply inline-flex items-center justify-center rounded-xl px-3 py-2 transition select-none;
-  border: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-  background: color-mix(in oklab, white 6%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
+  background: color-mix(in oklab, var(--card) 90%, transparent);
 }
-.btn:hover { background: color-mix(in oklab, white 10%, transparent); }
+.btn:hover { background: color-mix(in oklab, var(--card) 94%, transparent); }
 
 .btn-primary { @apply text-white border-none; background: var(--primary); }
 :root[data-theme="day"] .btn-primary { @apply text-white; background: var(--primary); }
-.btn-primary:hover { filter: brightness(1.05); }
+.btn-primary:hover { filter: brightness(1.08); }
 
 .btn-danger { @apply text-white border-none; background: var(--danger); }
 .btn-danger:hover { filter: brightness(1.05); }
 
-.btn-ghost { background: color-mix(in oklab, white 6%, transparent); }
-.btn-ghost:hover { background: color-mix(in oklab, white 10%, transparent); }
-:root[data-theme="day"] .btn-ghost { background: color-mix(in oklab, black 6%, transparent); }
-:root[data-theme="day"] .btn-ghost:hover { background: color-mix(in oklab, black 12%, transparent); }
+.btn-ghost { background: color-mix(in oklab, var(--card) 86%, transparent); }
+.btn-ghost:hover { background: color-mix(in oklab, var(--card) 92%, transparent); }
+:root[data-theme="day"] .btn-ghost { background: color-mix(in oklab, #000 4%, transparent); }
+:root[data-theme="day"] .btn-ghost:hover { background: color-mix(in oklab, #000 8%, transparent); }
+
+.cta-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  padding: 0.55rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid color-mix(in oklab, var(--accent) 45%, transparent);
+  color: color-mix(in oklab, var(--accent) 75%, white);
+  background: color-mix(in oklab, var(--accent) 20%, transparent);
+  transition: background var(--aura-transition) ease, color var(--aura-transition) ease, border-color var(--aura-transition) ease, box-shadow var(--aura-transition) ease;
+}
+.cta-pill:hover {
+  background: color-mix(in oklab, var(--accent) 28%, transparent);
+  box-shadow: 0 10px 24px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+:root[data-theme="day"] .cta-pill {
+  color: color-mix(in oklab, var(--accent) 65%, black);
+  background: color-mix(in oklab, var(--accent) 12%, white);
+  border-color: color-mix(in oklab, var(--accent) 35%, white);
+}
+:root[data-theme="day"] .cta-pill:hover {
+  background: color-mix(in oklab, var(--accent) 18%, white);
+}
 
 .link { @apply underline underline-offset-4 decoration-1; }
 .link:hover { text-decoration-thickness: 2px; }
@@ -134,10 +211,10 @@ body {
 .aura-orb--accent { background: radial-gradient(closest-side, color-mix(in oklab, var(--accent) 35%, transparent), transparent); }
 
 /* Chips & Toolbar */
-.chip { display: inline-flex; align-items: center; gap: .4rem; font-size: .75rem; line-height: 1; padding: .35rem .6rem; border-radius: 9999px; background: color-mix(in oklab, white 8%, transparent); border: 1px solid color-mix(in oklab, var(--border) 60%, transparent); }
+.chip { display: inline-flex; align-items: center; gap: .4rem; font-size: .75rem; line-height: 1; padding: .35rem .6rem; border-radius: 9999px; background: color-mix(in oklab, var(--card) 88%, transparent); border: 1px solid color-mix(in oklab, var(--border) 65%, transparent); }
 .chip--green { background: color-mix(in oklab, var(--success) 18%, transparent); color: #e8ffef; border-color: color-mix(in oklab, var(--success) 35%, transparent); }
 .chip--red   { background: color-mix(in oklab, var(--danger) 18%, transparent);  color: #ffecec; border-color: color-mix(in oklab, var(--danger) 35%, transparent); }
-:root[data-theme="day"] .chip { background: color-mix(in oklab, black 6%, transparent); border-color: color-mix(in oklab, black 14%, transparent); }
+:root[data-theme="day"] .chip { background: color-mix(in oklab, #000 4%, transparent); border-color: color-mix(in oklab, #000 10%, transparent); }
 :root[data-theme="day"] .chip--green { color: #065F46; background: color-mix(in oklab, var(--success) 10%, transparent); border-color: color-mix(in oklab, var(--success) 35%, transparent); }
 :root[data-theme="day"] .chip--red   { color: #7F1D1D; background: color-mix(in oklab, var(--danger) 10%, transparent);  border-color: color-mix(in oklab, var(--danger) 35%, transparent); }
 
@@ -182,6 +259,18 @@ input[type="range"] { accent-color: var(--accent); }
 :root[data-theme="day"] .bg-white\/10 { background-color: color-mix(in oklab, black 10%, transparent) !important; }
 :root[data-theme="day"] .bg-white\/15 { background-color: color-mix(in oklab, black 15%, transparent) !important; }
 :root[data-theme="day"] .bg-white\/20 { background-color: color-mix(in oklab, black 20%, transparent) !important; }
+:root[data-theme="day"] .text-white\/90 { color: color-mix(in oklab, #000 88%, transparent) !important; }
+:root[data-theme="day"] .text-white\/80 { color: color-mix(in oklab, #000 78%, transparent) !important; }
+:root[data-theme="day"] .text-white\/70 { color: color-mix(in oklab, #000 68%, transparent) !important; }
+:root[data-theme="day"] .text-white\/60 { color: color-mix(in oklab, #000 58%, transparent) !important; }
+:root[data-theme="day"] .text-white\/50 { color: color-mix(in oklab, #000 48%, transparent) !important; }
+:root[data-theme="day"] .bg-black\/25 { background-color: color-mix(in oklab, #000 10%, transparent) !important; }
+:root[data-theme="day"] .bg-black\/30 { background-color: color-mix(in oklab, #000 12%, transparent) !important; }
+:root[data-theme="day"] .bg-black\/60 { background-color: color-mix(in oklab, #000 18%, transparent) !important; }
+:root[data-theme="day"] .border-white\/10 { border-color: color-mix(in oklab, #000 12%, transparent) !important; }
+:root[data-theme="day"] .border-white\/15 { border-color: color-mix(in oklab, #000 16%, transparent) !important; }
+:root[data-theme="day"] .border-white\/20 { border-color: color-mix(in oklab, #000 20%, transparent) !important; }
+:root[data-theme="day"] .border-white\/40 { border-color: color-mix(in oklab, #000 26%, transparent) !important; }
 
 /* Smooth progress width transitions */
 .progress-smooth { transition: width var(--aura-transition) ease; }
@@ -189,6 +278,11 @@ input[type="range"] { accent-color: var(--accent); }
 /* Simple entry animation */
 @keyframes auraFadeInUp { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
 .fade-in-up { animation: auraFadeInUp 320ms ease both; }
+
+@keyframes auraDrawerIn { from { transform: translateX(-12%) scale(0.96); opacity: 0; } to { transform: translateX(0) scale(1); opacity: 1; } }
+@keyframes auraBackdropIn { from { opacity: 0; } to { opacity: 1; } }
+.nav-drawer { animation: auraDrawerIn var(--aura-transition) ease forwards; will-change: transform, opacity; }
+.nav-backdrop { animation: auraBackdropIn calc(var(--aura-transition) * 0.9) ease forwards; }
 
 /* Symbol avatars */
 .symbol-avatar { transition: transform 160ms ease, filter 160ms ease; }
@@ -250,3 +344,4 @@ input[type="range"] { accent-color: var(--accent); }
 .aura-onboard__dots { display:flex; gap:6px; }
 .aura-onboard__dot { width:8px; height:8px; border-radius:9999px; background:#2b3545; }
 .aura-onboard__dot.is-active { background: linear-gradient(90deg, #22c55e, #38bdf8); }
+

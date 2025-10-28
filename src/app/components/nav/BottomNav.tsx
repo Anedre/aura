@@ -20,7 +20,7 @@ export default function BottomNav({ items }: { items: Item[] }) {
 
   return (
     <nav
-      className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-[color:var(--border)]"
+      className="fixed bottom-0 inset-x-0 z-40 border-t border-[color:var(--border)]"
       style={{
         background: "color-mix(in oklab, var(--muted) 92%, transparent)",
         backdropFilter: "blur(8px)",
@@ -29,7 +29,7 @@ export default function BottomNav({ items }: { items: Item[] }) {
       }}
       aria-label="Barra de navegación inferior"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="mx-auto grid max-w-[520px] grid-cols-5">
         {mobileItems.map((it) => {
           const active = isActive(pathname, it);
           return (
@@ -39,6 +39,7 @@ export default function BottomNav({ items }: { items: Item[] }) {
                 className={`flex flex-col items-center justify-center py-2 text-[11px] gap-1 transition ${
                   active ? "text-white" : "text-white/75 hover:text-white"
                 }`}
+                aria-current={active ? "page" : undefined}
               >
                 <span className={`p-1.5 rounded-lg ${active ? "bg-white/15" : "bg-white/5"}`}>{it.icon}</span>
                 <span className="leading-none">{it.label}</span>

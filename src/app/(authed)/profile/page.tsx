@@ -342,12 +342,12 @@ export default function ProfilePage() {
         <header className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-background p-8 shadow-xl">
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             <div className="space-y-4">
-              <span className="inline-flex items-center rounded-full border border-white/15 px-3 py-1 text-xs uppercase tracking-wide text-white/70">
+              <span className="inline-flex items-center rounded-full border border-white/15 px-3 py-1 text-xs uppercase tracking-wide text-subtle">
                 Perfil personal
               </span>
               <div className="space-y-3">
                 <h1 className="text-3xl font-semibold leading-tight">Hola {firstName}, personalicemos tu experiencia</h1>
-                <p className="text-sm text-white/70">
+                <p className="text-sm text-subtle">
                   Administra datos claves, activa recordatorios y sigue una guia simple para mantener tu plan en movimiento.
                 </p>
               </div>
@@ -355,7 +355,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setCoachMode((v) => !v)}
-                  className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-white/90 transition hover:bg-white/10"
+                  className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-strong transition hover:bg-white/10"
                 >
                   {coachMode ? "Ocultar ayuda paso a paso" : "Necesito ayuda simple"}
                 </button>
@@ -365,10 +365,10 @@ export default function ProfilePage() {
               </div>
             </div>
             <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-black/30 p-6 backdrop-blur">
-              <div className="text-xs uppercase tracking-wide text-white/60">Salud del perfil</div>
+              <div className="text-xs uppercase tracking-wide text-faint">Salud del perfil</div>
               <div className="mt-3 flex items-baseline gap-3">
                 <span className="text-4xl font-semibold">{completionData.profileHealth}</span>
-                <span className="text-sm text-white/60">de 100</span>
+                <span className="text-sm text-faint">de 100</span>
               </div>
               <div className="mt-2 text-sm text-emerald-200">
                 Checklist {completionData.checklistPercent}% • Preferencias {completionData.prefPercent}%
@@ -379,11 +379,11 @@ export default function ProfilePage() {
                   style={{ width: `${Math.min(100, Math.max(0, completionData.profileHealth))}%` }}
                 />
               </div>
-              <p className="mt-4 text-sm text-white/70">{completionData.copy}</p>
+              <p className="mt-4 text-sm text-subtle">{completionData.copy}</p>
               {completionData.nextStep && (
-                <p className="mt-3 text-xs text-white/60">
+                <p className="mt-3 text-xs text-faint">
                   Siguiente paso sugerido:{" "}
-                  <span className="font-medium text-white/80">{completionData.nextStep.title}</span>
+                  <span className="font-medium text-strong">{completionData.nextStep.title}</span>
                 </p>
               )}
             </div>
@@ -391,7 +391,7 @@ export default function ProfilePage() {
         </header>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-          <article className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+          <article className="surface p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Datos de la cuenta</h2>
               <span className="rounded-full border border-emerald-400/50 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
@@ -400,33 +400,33 @@ export default function ProfilePage() {
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
-                <div className="text-xs uppercase tracking-wide text-white/60">Email</div>
-                <div className="text-sm text-white/80">{sess?.email ?? "-"}</div>
+                <div className="text-xs uppercase tracking-wide text-faint">Email</div>
+                <div className="text-sm text-strong">{sess?.email ?? "-"}</div>
               </div>
               <div>
-                <div className="text-xs uppercase tracking-wide text-white/60">User ID</div>
-                <div className="text-sm text-white/80">{mask(sess?.user_id, 6)}</div>
+                <div className="text-xs uppercase tracking-wide text-faint">User ID</div>
+                <div className="text-sm text-strong">{mask(sess?.user_id, 6)}</div>
               </div>
               <div>
-                <div className="text-xs uppercase tracking-wide text-white/60">Expiracion del token</div>
-                <div className="text-sm text-white/80">{tokenExpires}</div>
+                <div className="text-xs uppercase tracking-wide text-faint">Expiracion del token</div>
+                <div className="text-sm text-strong">{tokenExpires}</div>
               </div>
               <div>
-                <div className="text-xs uppercase tracking-wide text-white/60">Preferencias activas</div>
-                <div className="text-sm text-white/80">
+                <div className="text-xs uppercase tracking-wide text-faint">Preferencias activas</div>
+                <div className="text-sm text-strong">
                   {completionData.prefActive}/{completionData.prefTotal}
                 </div>
               </div>
             </div>
-            <p className="mt-4 text-xs text-white/60">
+            <p className="mt-4 text-xs text-faint">
               Mantener estos datos actualizados nos ayuda a darte alertas personalizadas y a responder mas rapido ante cualquier consulta.
             </p>
           </article>
 
-          <article className="flex flex-col justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+          <article className="surface flex flex-col justify-between gap-4 p-6">
             <div>
               <h3 className="text-base font-semibold">Recordatorio rapido</h3>
-              <p className="mt-2 text-sm text-white/70">
+              <p className="mt-2 text-sm text-subtle">
                 {completionData.nextStep
                   ? `Marca como completado: ${completionData.nextStep.detail}`
                   : "Todo al dia por ahora. Agenda revisar tu perfil cada pocas semanas."}
@@ -435,22 +435,22 @@ export default function ProfilePage() {
             {nextStepHref && nextStepCta ? (
               <button
                 type="button"
-                className="rounded-xl border border-emerald-400/60 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-400/20"
+                className="rounded-xl border border-emerald-400/60 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 day:bg-emerald-500/12 day:text-emerald-600 day:border-emerald-500/30 day:hover:bg-emerald-500/18"
                 onClick={() => router.push(nextStepHref)}
               >
                 {nextStepCta}
               </button>
             ) : (
-              <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-3 text-xs text-white/60">
+              <div className="surface-muted px-4 py-3 text-xs text-faint">
                 Consejo: configura un recordatorio en tu calendario para revisar tu plan cada 30 dias.
               </div>
             )}
           </article>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+        <section className="surface p-6">
           <h2 className="text-lg font-semibold">Activo favorito</h2>
-          <p className="mt-1 text-sm text-white/70">Elige un símbolo (ej. BTC-USD, AAPL, EURUSD=X). Se destacará en tu inicio.</p>
+          <p className="mt-1 text-sm text-subtle">Elige un símbolo (ej. BTC-USD, AAPL, EURUSD=X). Se destacará en tu inicio.</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <input className="input w-48" placeholder="Símbolo" value={fav} onChange={(e) => setFav(e.target.value.toUpperCase())} />
             <button className="btn" onClick={() => setShowFavPicker(true)}>Elegir</button>
@@ -528,9 +528,9 @@ export default function ProfilePage() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+        <section className="surface p-6">
           <h2 className="text-lg font-semibold">Clase preferida en inicio</h2>
-          <p className="mt-1 text-sm text-white/70">Usamos esta preferencia como filtro por defecto en tu página de inicio. Puedes quitarlo desde la misma pantalla.</p>
+          <p className="mt-1 text-sm text-subtle">Usamos esta preferencia como filtro por defecto en tu página de inicio. Puedes quitarlo desde la misma pantalla.</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <select className="input w-56" value={prefClass} onChange={(e) => setPrefClass(e.target.value as typeof prefClass)}>
               <option value="all">Todas</option>
@@ -545,15 +545,15 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+        <section className="surface p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">Preferencias y alertas</h2>
-              <p className="text-sm text-white/70">
+              <p className="text-sm text-subtle">
                 Activa las opciones que te ayudan a tomar decisiones oportunas sin abrumarte.
               </p>
             </div>
-            <span className="text-xs uppercase tracking-wide text-white/60">
+            <span className="text-xs uppercase tracking-wide text-faint">
               {completionData.prefActive}/{completionData.prefTotal} activas
             </span>
           </div>
@@ -561,10 +561,10 @@ export default function ProfilePage() {
             {(Object.keys(defaultPrefs) as PrefKey[]).map((key) => (
               <div
                 key={key}
-                className={`flex items-start gap-3 rounded-xl border p-4 transition ${
+                className={`surface-muted flex items-start gap-3 p-4 transition ${
                   prefs[key]
-                    ? "border-emerald-400/60 bg-emerald-400/10 shadow-lg"
-                    : "border-white/10 bg-black/25 hover:border-white/20"
+                    ? "border-emerald-400/60 bg-emerald-400/12 shadow-lg"
+                    : "border-transparent"
                 }`}
               >
                 <input
@@ -574,24 +574,24 @@ export default function ProfilePage() {
                   className="mt-1 h-4 w-4 rounded border-white/40 bg-black/60 text-emerald-400 focus:ring-emerald-300"
                 />
                 <div className="space-y-1">
-                  <div className="text-sm font-semibold text-white/80">{prefCopy[key].title}</div>
-                  <p className="text-xs text-white/60">{prefCopy[key].detail}</p>
+                  <div className="text-sm font-semibold text-strong">{prefCopy[key].title}</div>
+                  <p className="text-xs text-faint">{prefCopy[key].detail}</p>
                 </div>
               </div>
             ))}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+        <section className="surface p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">Checklist de seguridad y habitos</h2>
-              <p className="text-sm text-white/70">
+              <p className="text-sm text-subtle">
                 Marca cada paso para reforzar tu disciplina y mantener la cuenta protegida.
               </p>
             </div>
             <div className="text-right">
-              <span className="text-xs uppercase tracking-wide text-white/60">
+              <span className="text-xs uppercase tracking-wide text-faint">
                 {completionData.doneCount}/{completionData.totalCount} completado
               </span>
               <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
@@ -611,10 +611,10 @@ export default function ProfilePage() {
               return (
                 <div
                   key={item.id}
-                  className={`flex items-start gap-3 rounded-xl border p-4 transition ${
+                  className={`surface-muted flex items-start gap-3 p-4 transition ${
                     checked
-                      ? "border-emerald-400/60 bg-emerald-400/10 shadow-lg"
-                      : "border-white/10 bg-black/25 hover:border-white/20"
+                      ? "border-emerald-400/60 bg-emerald-400/12 shadow-lg"
+                      : "border-transparent"
                   }`}
                 >
                   <input
@@ -625,10 +625,10 @@ export default function ProfilePage() {
                     className="mt-1 h-4 w-4 rounded border-white/40 bg-black/60 text-emerald-400 focus:ring-emerald-300"
                   />
                   <div className="space-y-1">
-                    <label htmlFor={checkboxId} className="text-sm font-semibold text-white/80 cursor-pointer">
+                    <label htmlFor={checkboxId} className="text-sm font-semibold text-strong cursor-pointer">
                       {item.title}
                     </label>
-                    <p className="text-xs text-white/60">{item.detail}</p>
+                    <p className="text-xs text-faint">{item.detail}</p>
                     {href && ctaLabel && (
                       <button
                         type="button"
@@ -645,16 +645,16 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+        <section className="surface p-6">
           <div className="space-y-2">
             <h2 className="text-lg font-semibold">Actualiza tu contrasena</h2>
-            <p className="text-sm text-white/70">
+            <p className="text-sm text-subtle">
               Cambia tu contrasena de manera segura. Usa una frase facil de recordar pero dificil de adivinar.
             </p>
           </div>
           <form onSubmit={onChangePassword} className="mt-4 grid gap-3 max-w-lg">
             <label className="grid gap-1">
-              <span className="text-xs uppercase tracking-wide text-white/60">Contrasena actual</span>
+              <span className="text-xs uppercase tracking-wide text-faint">Contrasena actual</span>
               <input
                 type="password"
                 value={oldPwd}
@@ -664,7 +664,7 @@ export default function ProfilePage() {
               />
             </label>
             <label className="grid gap-1">
-              <span className="text-xs uppercase tracking-wide text-white/60">Nueva contrasena</span>
+              <span className="text-xs uppercase tracking-wide text-faint">Nueva contrasena</span>
               <input
                 type="password"
                 value={newPwd}
@@ -680,7 +680,7 @@ export default function ProfilePage() {
               </button>
               <button
                 type="button"
-                className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-white/90 transition hover:bg-white/10"
+                className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-strong transition hover:bg-white/10"
                 onClick={() => { setOldPwd(""); setNewPwd(""); }}
                 disabled={busy}
               >
@@ -688,27 +688,27 @@ export default function ProfilePage() {
               </button>
             </div>
           </form>
-          <p className="mt-3 text-xs text-white/60">
+          <p className="mt-3 text-xs text-faint">
             Cognito valida la politica real (longitud, combinacion de caracteres, etc.).
           </p>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+        <section className="surface p-6">
           <h2 className="text-lg font-semibold">Aprendizaje y herramientas</h2>
-          <p className="mt-2 text-sm text-white/70">Explora modulos que te ayudan a tomar decisiones con confianza.</p>
+          <p className="mt-2 text-sm text-subtle">Explora modulos que te ayudan a tomar decisiones con confianza.</p>
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             {learningCards.map((card) => (
               <article
                 key={card.title}
-                className="flex flex-col justify-between rounded-xl border border-white/10 bg-black/25 p-5 transition hover:border-white/20"
+                className="surface-muted flex flex-col justify-between p-5 transition hover:border-strong"
               >
                 <div>
-                  <h3 className="text-base font-semibold text-white/80">{card.title}</h3>
-                  <p className="mt-2 text-sm text-white/70">{card.detail}</p>
+                  <h3 className="text-base font-semibold text-strong">{card.title}</h3>
+                  <p className="mt-2 text-sm text-subtle">{card.detail}</p>
                 </div>
                 <button
                   type="button"
-                  className="mt-4 inline-flex items-center justify-center rounded-xl border border-emerald-400/60 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-200 transition hover:bg-emerald-400/20"
+                  className="mt-4 inline-flex items-center justify-center rounded-xl border border-emerald-400/60 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-100 transition hover:bg-emerald-500/25 day:bg-emerald-500/12 day:text-emerald-600 day:border-emerald-500/30 day:hover:bg-emerald-500/18"
                   onClick={card.onAction}
                 >
                   {card.action}
@@ -719,19 +719,19 @@ export default function ProfilePage() {
         </section>
 
         {coachMode && (
-          <section className="rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+          <section className="surface p-6">
             <h2 className="text-lg font-semibold">Ayuda paso a paso para nuevos inversores</h2>
-            <p className="mt-2 text-sm text-white/70">
+            <p className="mt-2 text-sm text-subtle">
               Sigue estas ideas simples para sentir control del proceso sin abrumarte.
             </p>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               {coachTips.map((tip) => (
                 <article
                   key={tip.title}
-                  className="rounded-xl border border-white/10 bg-black/25 p-5 transition hover:border-white/20"
+                  className="surface-muted p-5 transition hover:border-strong"
                 >
-                  <h3 className="text-base font-semibold text-white/80">{tip.title}</h3>
-                  <p className="mt-2 text-sm text-white/70">{tip.detail}</p>
+                  <h3 className="text-base font-semibold text-strong">{tip.title}</h3>
+                  <p className="mt-2 text-sm text-subtle">{tip.detail}</p>
                 </article>
               ))}
             </div>
@@ -741,3 +741,10 @@ export default function ProfilePage() {
     </main>
   );
 }
+
+
+
+
+
+
+
