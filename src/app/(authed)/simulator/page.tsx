@@ -401,6 +401,7 @@ export default function SimulatorPage() {
                   value={Math.min(1000, inp.monthly)}
                   onChange={(e) => setInp({ ...inp, monthly: Number(e.target.value) })}
                   className="w-full"
+                  aria-label="Ajustar aporte mensual"
                 />
                 {showHelp && <div className="text-[11px] opacity-70 mt-1">Desliza para ver cómo cambia el resultado con tu aporte mensual.</div>}
               </div>
@@ -418,6 +419,7 @@ export default function SimulatorPage() {
                   className="w-full mt-2"
                   value={inp.months}
                   onChange={(e) => setInp({ ...inp, months: Number(e.target.value) })}
+                  aria-label="Ajustar horizonte en meses"
                 />
                 {showHelp && <div className="text-xs opacity-70 mt-1">Es el tiempo que planeas mantener tu inversión. Más tiempo suele reducir el riesgo de terminar en pérdida.</div>}
               </label>
@@ -540,7 +542,12 @@ export default function SimulatorPage() {
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm opacity-80">Opcional: inspírate con tu feed diario (no anualizable)</div>
                 <div className="flex items-center gap-2">
-                  <select className="input text-sm w-auto" value={symbol} onChange={(e) => setSymbol(e.target.value as (typeof SYMBOLS)[number])}>
+                  <select
+                    aria-label="Seleccionar símbolo para cargar ideas del feed"
+                    className="input text-sm w-auto"
+                    value={symbol}
+                    onChange={(e) => setSymbol(e.target.value as (typeof SYMBOLS)[number])}
+                  >
                     {SYMBOLS.map((s) => (
                       <option key={s} value={s}>{s}</option>
                     ))}
@@ -970,7 +977,12 @@ function TourModalV2({
           <div className="flex items-center justify-between gap-2">
             <div className="opacity-80">Símbolo: <span className="font-semibold">{symbol}</span></div>
             <div className="flex items-center gap-2">
-              <select className="input text-xs w-auto" value={actionF} onChange={(e) => setActionF(e.target.value as "ALL"|"BUY"|"SELL")}>
+              <select
+                aria-label="Filtrar ideas por tipo de acción"
+                className="input text-xs w-auto"
+                value={actionF}
+                onChange={(e) => setActionF(e.target.value as "ALL"|"BUY"|"SELL")}
+              >
                 <option value="ALL">Todas</option>
                 <option value="BUY">BUY</option>
                 <option value="SELL">SELL</option>

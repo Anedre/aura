@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSession, logout } from "@/lib/auth";
 import SymbolAvatar from "@/components/SymbolAvatar";
 import { getAssetMeta } from "@/lib/assets.meta";
@@ -133,6 +133,7 @@ const coachTips = [
 
 export default function ProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [sess, setSess] = useState<Sess | null>(null);
   const [prefs, setPrefs] = useState<Record<PrefKey, boolean>>(defaultPrefs);
   const [checklist, setChecklist] = useState<Record<string, boolean>>(() => ({ ...defaultChecklistState }));
@@ -142,6 +143,7 @@ export default function ProfilePage() {
   const [showFavPicker, setShowFavPicker] = useState(false);
   const [favQuery, setFavQuery] = useState("");
   const [favHighlight, setFavHighlight] = useState<number>(-1);
+  const forcePick = (searchParams?.get("tour") === "1");
   const SUGGESTIONS: string[] = [
     "BTC-USD","ETH-USD","LTC-USD","LINK-USD","ADA-USD","SOL-USD","DOGE-USD","XRP-USD","BNB-USD",
     "SPY","QQQ","TLT","GLD","DIA","IWM","EEM","HYG","XLK","XLE","XLF","XLV","XLY","XLI","XLP","XLB","XLU",
@@ -166,6 +168,30 @@ export default function ProfilePage() {
     try { const cls = localStorage.getItem(PREF_CLASS_KEY) as typeof prefClass | null; if (cls) setPrefClass(cls); } catch { /* noop */ }
   }, []);
   const saveFav = () => { try { localStorage.setItem(FAVORITE_ASSET_KEY, (fav || "").toUpperCase()); } catch { /* noop */ } };
+
+  // Bloquear scroll del fondo cuando el modal está abierto (solución móvil-friendly)
+  useEffect(() => {
+    if (!showFavPicker) return;
+    
+    // Prevenir scroll en iOS y Android
+    const preventDefault = (e: TouchEvent) => {
+      if ((e.target as HTMLElement)?.closest('[data-tour="favorite-modal"]')) return;
+      e.preventDefault();
+    };
+    
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('touchmove', preventDefault, { passive: false });
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('touchmove', preventDefault);
+    };
+  }, [showFavPicker]);
+
+  function emit(name: string, detail?: unknown) {
+    const scope = document.querySelector('[data-tour="profile-favorite"]') || document;
+    scope.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));
+  }
   const savePrefClass = () => { try { localStorage.setItem(PREF_CLASS_KEY, prefClass); } catch { /* noop */ } };
 
   // Recupera y persiste preferencias
@@ -454,25 +480,68 @@ export default function ProfilePage() {
         </section>
 
         <section className="surface p-6" data-tour="profile-favorite">
-          <h2 className="text-lg font-semibold">Activo favorito</h2>
-          <p className="mt-1 text-sm text-subtle">Elige un símbolo (ej. BTC-USD, AAPL, EURUSD=X). Se destacará en tu inicio.</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <input className="input w-48" placeholder="Símbolo" value={fav} onChange={(e) => setFav(e.target.value.toUpperCase())} />
-            <button className="btn" data-tour-target="favorite-choose" onClick={() => setShowFavPicker(true)}>Elegir</button>
-            <button className="btn btn-primary" data-tour-target="favorite-save" onClick={saveFav}>Guardar favorito</button>
-            {fav && <span className="chip">Actual: {fav}</span>}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">Activo favorito</h2>
+              <p className="mt-1 text-sm text-subtle">Se destacará en tu página de inicio para acceso rápido.</p>
+            </div>
+            {fav && (
+              <div className="flex items-center gap-2 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5">
+                <SymbolAvatar symbol={fav} size={18} />
+                <span className="text-sm font-medium text-emerald-200">{fav}</span>
+              </div>
+            )}
+          </div>
+          <div className="mt-4">
+            <button
+              className="btn btn-primary w-full sm:w-auto"
+              data-tour-target="favorite-choose"
+              onClick={() => { setShowFavPicker(true); emit("aura:fav-opened"); }}
+            >
+              {fav ? "Cambiar activo favorito" : "Elegir activo favorito"}
+            </button>
           </div>
           {showFavPicker && (
-            <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
-              <div className="absolute inset-0 bg-black/60" onClick={() => setShowFavPicker(false)} />
-              <div className="absolute inset-0 flex items-start sm:items-center justify-center p-4 sm:p-6">
-                <div className="card w-full max-w-xl p-4">
-                  <div className="text-sm opacity-75 mb-2">Buscar símbolo</div>
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 pt-safe sm:p-6"
+              style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+              role="dialog"
+              aria-modal="true"
+              data-tour="favorite-modal-wrapper"
+              onKeyDown={(e) => { if (e.key === 'Escape' && !forcePick) setShowFavPicker(false); }}
+            >
+              <div
+                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                onClick={() => { if (!forcePick) setShowFavPicker(false); }}
+              />
+              <div 
+                data-tour="favorite-modal"
+                data-tour-nosnap="1"
+                className="relative z-10 w-full max-w-xl max-h-[80vh] card rounded-2xl flex flex-col shadow-2xl"
+              >
+                {/* Header */}
+                <div className="p-4 sm:p-5 flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold">Buscar símbolo</span>
+                    {!forcePick && (
+                      <button
+                        onClick={() => setShowFavPicker(false)}
+                        className="text-xs opacity-70 hover:opacity-100 transition p-1 -mr-1"
+                        aria-label="Cerrar"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Search input */}
+                <div className="p-4 sm:p-5 flex-shrink-0">
                   <input
                     autoFocus
-                    className="input w-full"
+                    className="input w-full text-base"
                     data-tour-target="favorite-search"
-                    placeholder="Escribe un símbolo (ej. BTC-USD, AAPL, EURUSD=X)"
+                    placeholder="Buscar: BTC-USD, AAPL..."
                     value={favQuery}
                     onChange={(e) => { setFavQuery(e.target.value); setFavHighlight(-1); }}
                     onKeyDown={(e) => {
@@ -481,52 +550,59 @@ export default function ProfilePage() {
                       if (e.key === 'Enter') {
                         const idx = favHighlight >= 0 && favHighlight < filtered.length ? favHighlight : 0;
                         const pick = (filtered[idx] ?? q);
-                        setFav(pick); saveFav(); setShowFavPicker(false);
+                        setFav(pick); saveFav(); setShowFavPicker(false); emit("aura:fav-selected", { symbol: pick });
                       } else if (e.key === 'Escape') { setShowFavPicker(false); }
                       else if (e.key === 'ArrowDown') { e.preventDefault(); setFavHighlight(h => Math.min((h < 0 ? -1 : h) + 1, filtered.length - 1)); }
                       else if (e.key === 'ArrowUp') { e.preventDefault(); setFavHighlight(h => Math.max((h < 0 ? filtered.length : h) - 1, 0)); }
                     }}
                   />
-                  <div className="mt-2 max-h-72 overflow-auto">
-                    {(() => {
-                      const q = favQuery.trim().toUpperCase();
-                      const list = SUGGESTIONS.filter(s => s.toUpperCase().includes(q)).slice(0, 40);
-                      const groups: Record<string, string[]> = { crypto: [], equity: [], etf: [], forex: [], index: [], other: [] };
-                      for (const s of list) { groups[classifySymbol(s)]?.push(s); }
-                      const order: Array<keyof typeof groups> = ['crypto','equity','etf','forex','index','other'];
-                      const labels: Record<string,string> = { crypto: 'Cripto', equity: 'Acciones', etf: 'ETF', forex: 'Forex', index: 'Índices', other: 'Otros' };
-                      const flat: Array<{k:string; s:string}> = [];
-                      order.forEach(k => { groups[k].forEach(s => flat.push({k, s})); });
-                      if (flat.length === 0) return (<div className="px-3 py-2 text-sm opacity-70">Sin resultados</div>);
-                      return flat.map((row, i) => {
-                        const s = row.s; const m = getAssetMeta(s);
-                        const showHeader = i === 0 || flat[i-1].k !== row.k;
-                        const active = i === favHighlight;
-                        return (
-                          <div key={`${row.k}-${s}`}>
-                            {showHeader && (
-                              <div className="px-3 py-1 text-xs uppercase tracking-wide opacity-60">{labels[row.k] ?? row.k}</div>
-                            )}
-                            <button
-                              className={`w-full text-left px-3 py-2 rounded-lg transition ${active ? 'bg-white/15' : 'hover:bg-white/15'} ${s===fav? 'ring-1 ring-white/10 bg-white/10':''}`}
-                              onMouseEnter={() => setFavHighlight(i)}
-                              onFocus={() => setFavHighlight(i)}
-                              onClick={() => { setFav(s); saveFav(); setShowFavPicker(false); }}
-                            >
-                              <span className="inline-flex items-center gap-2">
-                                <SymbolAvatar symbol={s} size={18} />
-                                <span className="font-medium">{s}</span>
-                                {m?.name && <span className="opacity-70 text-xs">{m.name}</span>}
-                              </span>
-                            </button>
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                  <div className="flex items-center justify-between mt-3 text-xs opacity-60">
-                    <span>Enter: seleccionar</span>
-                    <span>Esc: cerrar</span>
+                </div>
+                
+                {/* Results list */}
+                <div className="flex-1 overflow-y-auto overscroll-contain px-0">
+                  {(() => {
+                    const q = favQuery.trim().toUpperCase();
+                    const list = SUGGESTIONS.filter(s => s.toUpperCase().includes(q)).slice(0, 40);
+                    const groups: Record<string, string[]> = { crypto: [], equity: [], etf: [], forex: [], index: [], other: [] };
+                    for (const s of list) { groups[classifySymbol(s)]?.push(s); }
+                    const order: Array<keyof typeof groups> = ['crypto','equity','etf','forex','index','other'];
+                    const labels: Record<string,string> = { crypto: 'Cripto', equity: 'Acciones', etf: 'ETF', forex: 'Forex', index: 'Índices', other: 'Otros' };
+                    const flat: Array<{k:string; s:string}> = [];
+                    order.forEach(k => { groups[k].forEach(s => flat.push({k, s})); });
+                    if (flat.length === 0) return (<div className="px-3 py-8 text-center text-sm opacity-70">Sin resultados</div>);
+                    return flat.map((row, i) => {
+                      const s = row.s; const m = getAssetMeta(s);
+                      const showHeader = i === 0 || flat[i-1].k !== row.k;
+                      const active = i === favHighlight;
+                      return (
+                        <div key={`${row.k}-${s}`}>
+                          {showHeader && (
+                            <div className="sticky top-0 bg-background/95 backdrop-blur px-3 py-2 text-xs uppercase tracking-wide opacity-70 border-b border-white/5">{labels[row.k] ?? row.k}</div>
+                          )}
+                          <button
+                            className={`w-full text-left px-3 py-3 transition touch-manipulation ${active ? 'bg-white/15' : 'hover:bg-white/10 active:bg-white/15'} ${s===fav? 'ring-1 ring-emerald-400/40 bg-emerald-500/10':''}`}
+                            onMouseEnter={() => setFavHighlight(i)}
+                            onFocus={() => setFavHighlight(i)}
+                            onClick={() => { setFav(s); saveFav(); setShowFavPicker(false); emit("aura:fav-selected", { symbol: s }); }}
+                          >
+                            <span className="inline-flex items-center gap-2">
+                              <SymbolAvatar symbol={s} size={20} />
+                              <span className="font-medium text-base">{s}</span>
+                              {m?.name && <span className="opacity-70 text-xs truncate">{m.name}</span>}
+                            </span>
+                          </button>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+                
+                {/* Footer hints */}
+                <div className="p-4 sm:p-5 flex-shrink-0 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between text-xs opacity-60">
+                    <span className="hidden sm:inline">↑↓ Navegar • Enter: Seleccionar</span>
+                    <span className="sm:hidden">Toca para seleccionar</span>
+                    <span>{forcePick ? 'Modo tour activo' : 'Toca fuera para cerrar'}</span>
                   </div>
                 </div>
               </div>
@@ -536,23 +612,30 @@ export default function ProfilePage() {
 
         <section className="surface p-6" data-tour="profile-home-filter">
           <h2 className="text-lg font-semibold">Clase preferida en inicio</h2>
-          <p className="mt-1 text-sm text-subtle">Usamos esta preferencia como filtro por defecto en tu página de inicio. Puedes quitarlo desde la misma pantalla.</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <p className="mt-1 text-sm text-subtle">Filtra automáticamente el tipo de activos que ves por defecto.</p>
+          <div className="mt-4 flex items-center gap-3">
             <select
-              className="input w-56"
+              aria-label="Seleccionar clase preferida en inicio"
+              className="input flex-1 max-w-xs"
               data-tour-target="home-filter-select"
               value={prefClass}
-              onChange={(e) => setPrefClass(e.target.value as typeof prefClass)}
+              onChange={(e) => {
+                const newVal = e.target.value as typeof prefClass;
+                setPrefClass(newVal);
+                savePrefClass();
+                notify(`Clase preferida actualizada: ${newVal === "all" ? "Todas" : newVal}`);
+              }}
             >
-              <option value="all">Todas</option>
-              <option value="crypto">Cripto</option>
-              <option value="forex">Forex</option>
+              <option value="all">Todas las clases</option>
+              <option value="crypto">Criptomonedas</option>
+              <option value="forex">Divisas (Forex)</option>
               <option value="equity">Acciones</option>
-              <option value="etf">ETF</option>
+              <option value="etf">ETFs</option>
               <option value="index">Índices</option>
             </select>
-            <button className="btn btn-primary" data-tour-target="home-filter-save" onClick={savePrefClass}>Guardar preferencia</button>
-            <span className="chip">Actual: {prefClass}</span>
+            <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-subtle">
+              Se guarda automáticamente
+            </div>
           </div>
         </section>
 
@@ -569,29 +652,36 @@ export default function ProfilePage() {
             </span>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-3" data-tour-target="profile-alerts-grid">
-            {(Object.keys(defaultPrefs) as PrefKey[]).map((key, idx) => (
-              <div
-                key={key}
-                data-tour-target={idx === 0 ? "alerts-weekly" : undefined}
-                className={`surface-muted flex items-start gap-3 p-4 transition ${
-                  prefs[key]
-                    ? "border-emerald-400/60 bg-emerald-400/12 shadow-lg"
-                    : "border-transparent"
-                }`}
-              >
-                <input
-                  type="checkbox"
+            {(Object.keys(defaultPrefs) as PrefKey[]).map((key, idx) => {
+              const checkboxId = `pref-${key}`;
+              return (
+                <div
+                  key={key}
                   data-tour-target={idx === 0 ? "alerts-weekly" : undefined}
-                  checked={prefs[key]}
-                  onChange={() => togglePref(key)}
-                  className="mt-1 h-4 w-4 rounded border-white/40 bg-black/60 text-emerald-400 focus:ring-emerald-300"
-                />
-                <div className="space-y-1">
-                  <div className="text-sm font-semibold text-strong">{prefCopy[key].title}</div>
-                  <p className="text-xs text-faint">{prefCopy[key].detail}</p>
+                  className={`surface-muted flex items-start gap-3 p-4 transition ${
+                    prefs[key]
+                      ? "border-emerald-400/60 bg-emerald-400/12 shadow-lg"
+                      : "border-transparent"
+                  }`}
+                >
+                  <input
+                    id={checkboxId}
+                    type="checkbox"
+                    aria-describedby={`${checkboxId}-detail`}
+                    data-tour-target={idx === 0 ? "alerts-weekly" : undefined}
+                    checked={prefs[key]}
+                    onChange={() => togglePref(key)}
+                    className="mt-1 h-4 w-4 rounded border-white/40 bg-black/60 text-emerald-400 focus:ring-emerald-300"
+                  />
+                  <div className="space-y-1">
+                    <label htmlFor={checkboxId} className="text-sm font-semibold text-strong cursor-pointer">
+                      {prefCopy[key].title}
+                    </label>
+                    <p id={`${checkboxId}-detail`} className="text-xs text-faint">{prefCopy[key].detail}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -669,7 +759,7 @@ export default function ProfilePage() {
           </div>
           <form onSubmit={onChangePassword} className="mt-4 grid gap-3 max-w-lg">
             <label className="grid gap-1">
-              <span className="text-xs uppercase tracking-wide text-faint">Contrasena actual</span>
+              <span className="text-xs uppercase tracking-wide text-faint">Contraseña actual</span>
               <input
                 type="password"
                 value={oldPwd}
@@ -679,32 +769,22 @@ export default function ProfilePage() {
               />
             </label>
             <label className="grid gap-1">
-              <span className="text-xs uppercase tracking-wide text-faint">Nueva contrasena</span>
+              <span className="text-xs uppercase tracking-wide text-faint">Nueva contraseña</span>
               <input
                 type="password"
                 value={newPwd}
                 onChange={(e) => setNewPwd(e.target.value)}
                 className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-400/40"
                 autoComplete="new-password"
-                placeholder="Minimo 8 caracteres"
+                placeholder="Mínimo 8 caracteres"
               />
             </label>
-            <div className="flex gap-2 pt-2">
-              <button className="btn" type="submit" disabled={!canSubmit || busy}>
-                {busy ? "Actualizando..." : "Guardar"}
-              </button>
-              <button
-                type="button"
-                className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-strong transition hover:bg-white/10"
-                onClick={() => { setOldPwd(""); setNewPwd(""); }}
-                disabled={busy}
-              >
-                Limpiar
-              </button>
-            </div>
+            <button className="btn btn-primary" type="submit" disabled={!canSubmit || busy}>
+              {busy ? "Actualizando..." : "Actualizar contraseña"}
+            </button>
           </form>
           <p className="mt-3 text-xs text-faint">
-            Cognito valida la politica real (longitud, combinacion de caracteres, etc.).
+            Cognito valida la política real (longitud, combinación de caracteres, etc.).
           </p>
         </section>
 

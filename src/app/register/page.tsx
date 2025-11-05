@@ -29,6 +29,10 @@ export default function RegisterPage() {
   const [code, setCode] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const nameInputId = "register-name";
+  const emailInputId = "register-email";
+  const passwordInputId = "register-password";
+  const codeInputId = "register-code";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,10 +89,13 @@ export default function RegisterPage() {
         </div>
       }
     >
-      <form onSubmit={onSubmit} className="space-y-3" aria-busy={loading}>
+      <form onSubmit={onSubmit} className="space-y-3" aria-busy={loading ? "true" : "false"}>
         <div>
-          <label className="block text-sm mb-1">Nombre</label>
+          <label className="block text-sm mb-1" htmlFor={nameInputId}>Nombre</label>
           <input
+            id={nameInputId}
+            type="text"
+            aria-label="Nombre"
             className="input"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -97,9 +104,11 @@ export default function RegisterPage() {
           />
         </div>
         <div>
-          <label className="block text-sm mb-1">Email</label>
+          <label className="block text-sm mb-1" htmlFor={emailInputId}>Email</label>
           <input
+            id={emailInputId}
             type="email"
+            aria-label="Email"
             className="input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -108,10 +117,12 @@ export default function RegisterPage() {
           />
         </div>
         <div>
-          <label className="block text-sm mb-1">Contraseña</label>
+          <label className="block text-sm mb-1" htmlFor={passwordInputId}>Contraseña</label>
           <div className="relative">
             <input
+              id={passwordInputId}
               type={showPwd ? "text" : "password"}
+              aria-label="Contraseña"
               className="input pr-10"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -151,15 +162,17 @@ export default function RegisterPage() {
         </div>
       }
     >
-      <form onSubmit={onConfirm} className="space-y-3" aria-busy={loading}>
+      <form onSubmit={onConfirm} className="space-y-3" aria-busy={loading ? "true" : "false"}>
         <div>
-          <label className="block text-sm mb-1">Email</label>
+          <label className="block text-sm mb-1" htmlFor={`${emailInputId}-readonly`}>Email</label>
+          <input id={`${emailInputId}-readonly`} type="email" className="input" value={email} readOnly />
         </div>
-        <input type="email" className="input" value={email} readOnly />
 
         <div>
-          <label className="block text-sm mb-1">Código</label>
+          <label className="block text-sm mb-1" htmlFor={codeInputId}>Código</label>
           <input
+            id={codeInputId}
+            aria-label="Código de verificación"
             className="input"
             value={code}
             onChange={(e) => setCode(e.target.value)}

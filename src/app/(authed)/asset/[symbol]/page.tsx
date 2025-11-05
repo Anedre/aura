@@ -639,7 +639,7 @@ export default function AssetPage({}: { params?: RouteParamsPromise }) {
                   <div key={row.label} className="rounded-lg border border-white/10 bg-white/[0.02] p-3 space-y-1.5">
                     <dt className="text-[11px] uppercase tracking-wide opacity-70">{row.label}</dt>
                     <dd className="text-sm font-semibold text-white">{row.value}</dd>
-                    <p className="text-[11px] opacity-70 leading-relaxed">{row.helper}</p>
+                    <dd className="text-[11px] opacity-70 leading-relaxed">{row.helper}</dd>
                   </div>
                 ))}
               </dl>

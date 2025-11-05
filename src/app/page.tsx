@@ -17,6 +17,8 @@ function LoginInner() {
   const [showPwd, setShowPwd] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const emailInputId = "login-email";
+  const passwordInputId = "login-password";
 
   useEffect(() => {
     let alive = true;
@@ -124,11 +126,13 @@ function LoginInner() {
               <p className="text-sm opacity-80">Accede para continuar</p>
             </header>
 
-            <form onSubmit={onSubmit} className="space-y-4" aria-busy={loading}>
+            <form onSubmit={onSubmit} className="space-y-4" aria-busy={loading ? "true" : "false"}>
               <div>
-                <label className="block text-sm mb-1">Email</label>
+                <label className="block text-sm mb-1" htmlFor={emailInputId}>Email</label>
                 <input
+                  id={emailInputId}
                   type="email"
+                  aria-label="Email"
                   className="input h-12"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -139,10 +143,12 @@ function LoginInner() {
               </div>
 
               <div>
-                <label className="block text-sm mb-1">Contraseña</label>
+                <label className="block text-sm mb-1" htmlFor={passwordInputId}>Contraseña</label>
                 <div className="relative">
                   <input
+                    id={passwordInputId}
                     type={showPwd ? "text" : "password"}
+                    aria-label="Contraseña"
                     className="input h-12 pr-12"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}

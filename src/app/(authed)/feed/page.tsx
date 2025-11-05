@@ -371,6 +371,10 @@ function FeedInner() {
   const [tick, setTick] = useState(0);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const initDone = useRef(false);
+  const horizonSelectId = "feed-filters-horizon";
+  const sortSelectId = "feed-filters-sort";
+  const classSelectId = "feed-filters-class";
+  const minConfRangeId = "feed-filters-minconf";
 
   // 1) Inicializa desde URL (si hay)
   useEffect(() => {
@@ -540,8 +544,11 @@ function FeedInner() {
         {/* FILTROS (claros) */}
         <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex flex-wrap items-center gap-4" data-tour="feed-filters">
           <div className="flex items-center gap-2">
-            <label className="text-sm opacity-80">Periodo</label>
+            <label className="text-sm opacity-80" htmlFor={horizonSelectId}>Periodo</label>
             <select
+              id={horizonSelectId}
+              name="feed-horizon"
+              aria-label="Periodo"
               value={horizon}
               onChange={(e) => setHorizon(coerceHorizon(e.target.value))}
               className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm"
@@ -555,11 +562,14 @@ function FeedInner() {
           </div>
 
           <div className="flex-1 min-w-56">
-            <label className="flex items-center justify-between text-sm opacity-80">
+            <label className="flex items-center justify-between text-sm opacity-80" htmlFor={minConfRangeId}>
               <span>Nivel de certeza mínimo</span>
               <span className="font-medium">{Math.round(minConf * 100)}%</span>
             </label>
             <input
+              id={minConfRangeId}
+              name="feed-min-conf"
+              aria-label="Nivel de certeza mínimo"
               type="range"
               min={0}
               max={100}
@@ -589,8 +599,11 @@ function FeedInner() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm opacity-80">Ordenar por</span>
+            <label className="text-sm opacity-80" htmlFor={sortSelectId}>Ordenar por</label>
             <select
+              id={sortSelectId}
+              name="feed-sort"
+              aria-label="Ordenar resultados"
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}
               className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm"
@@ -601,8 +614,11 @@ function FeedInner() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm opacity-80">Clase</span>
+            <label className="text-sm opacity-80" htmlFor={classSelectId}>Clase</label>
             <select
+              id={classSelectId}
+              name="feed-class"
+              aria-label="Filtrar por clase de activo"
               value={classFilter}
               onChange={(e) => setClassFilter(e.currentTarget.value as AssetClass | 'all')}
               className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-sm"

@@ -447,6 +447,7 @@ export default function HomePage() {
                   </div>
                 </div>
                 <select
+                  aria-label="Seleccionar símbolo para seguimiento"
                   className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs"
                   value={watchSymbol}
                   onChange={(event) => setWatchSymbol(event.target.value)}

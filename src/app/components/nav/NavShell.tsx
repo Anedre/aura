@@ -114,6 +114,8 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
           background: "color-mix(in oklab, var(--muted) 92%, transparent)",
           backdropFilter: "blur(14px)",
           WebkitBackdropFilter: "blur(14px)",
+          paddingTop: "env(safe-area-inset-top)",
+          minHeight: "calc(env(safe-area-inset-top) + 3rem)",
         }}
       >
         <div className="flex items-center gap-2">

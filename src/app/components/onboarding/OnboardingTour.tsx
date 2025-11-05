@@ -10,16 +10,18 @@ type StageId = "welcome" | "profile" | "risk" | "feed" | "asset" | "demo" | "hom
 type Anchor = "center" | "bottom-right" | "bottom-left";
 type ExtraTipId = "invest" | "simulator";
 
+type WaitForConfig = {
+  event: string;
+  selector: string;
+};
+
 type StepSequence = {
   id: string;
   title?: string;
   body: ReactNode;
   highlight?: string;
   anchor?: Anchor;
-  waitFor?: {
-    event: string;
-    selector: string;
-  };
+  waitFor?: WaitForConfig;
   scope?: string;
 };
 
@@ -33,6 +35,7 @@ type StageStep = {
   secondaryLabel?: string;
   scope?: string;
   sequence?: StepSequence[];
+  waitFor?: WaitForConfig;
 };
 
 type Recommendation = {
@@ -213,23 +216,16 @@ function buildStageSteps(stage: StageId, ctx: StageContext): StageStep[] {
               body: <p>Presiona el botón para abrir el buscador de símbolos.</p>,
               highlight: "[data-tour-target='favorite-choose']",
               scope: "[data-tour='profile-favorite']",
-              waitFor: { event: "click", selector: "[data-tour-target='favorite-choose']" },
+              waitFor: { event: "aura:fav-opened", selector: "[data-tour='profile-favorite']" },
             },
             {
-              id: "favorite-search",
-              title: "Busca tu símbolo",
-              body: <p>Escribe el ticker (ej. BTC-USD) o elige uno de la lista y confirma.</p>,
-              highlight: "[data-tour-target='favorite-search']",
-              scope: "[data-tour='profile-favorite']",
-              waitFor: { event: "input", selector: "[data-tour-target='favorite-search']" },
-            },
-            {
-              id: "favorite-save",
-              title: "Guarda tu favorito",
-              body: <p>Ahora pulsa “Guardar favorito” para fijarlo en tu dashboard.</p>,
-              highlight: "[data-tour-target='favorite-save']",
-              scope: "[data-tour='profile-favorite']",
-              waitFor: { event: "click", selector: "[data-tour-target='favorite-save']" },
+              id: "favorite-picked",
+              title: "Selecciona un símbolo",
+              body: <p>Elige un activo del modal para continuar. El tour avanzará automáticamente.</p>,
+              highlight: "[data-tour='favorite-modal']",
+              scope: "[data-tour='favorite-modal']",
+              anchor: "center",
+              waitFor: { event: "aura:fav-selected", selector: "[data-tour='profile-favorite']" },
             },
           ],
         },
@@ -563,6 +559,7 @@ type ExtraTip = {
   highlight?: string;
   anchor?: Anchor;
   scope?: string;
+  waitFor?: WaitForConfig;
 };
 
 const EXTRA_TIPS: ExtraTip[] = [
@@ -604,10 +601,29 @@ export default function OnboardingTour() {
   const handlePrimaryRef = useRef<() => void>(() => {});
   const scopeRef = useRef<HTMLElement | null>(null);
   const highlightRef = useRef<HTMLElement | null>(null);
+  const spotlightStyleRef = useRef<HTMLStyleElement | null>(null);
   const [spotlight, setSpotlight] = useState<SpotlightBox | null>(null);
   const [waitingAction, setWaitingAction] = useState(false);
 
   useEffect(() => setIsClient(true), []);
+
+  useEffect(() => {
+    if (!isClient) return;
+    if (spotlightStyleRef.current && spotlightStyleRef.current.isConnected) return;
+    const existing = document.getElementById("aura-tour-spotlight-style") as HTMLStyleElement | null;
+    const styleEl = existing ?? document.createElement("style");
+    if (!existing) {
+      styleEl.id = "aura-tour-spotlight-style";
+      document.head.appendChild(styleEl);
+    }
+    spotlightStyleRef.current = styleEl;
+    return () => {
+      if (spotlightStyleRef.current) {
+        spotlightStyleRef.current.remove();
+        spotlightStyleRef.current = null;
+      }
+    };
+  }, [isClient]);
 
   useEffect(() => {
     if (!isClient) return;
@@ -688,6 +704,7 @@ export default function OnboardingTour() {
       setSpotlight(null);
       if (highlightRef.current) {
         highlightRef.current.classList.remove("aura-tour__highlight");
+        highlightRef.current.classList.remove("aura-tour__highlight--attention");
         highlightRef.current = null;
       }
       return;
@@ -748,7 +765,12 @@ export default function OnboardingTour() {
       node.classList.add("aura-tour__highlight");
       measure();
       try {
-        node.scrollIntoView({ block: "center", behavior: "smooth" });
+        const computed = window.getComputedStyle(node);
+        const isFixed = computed.position === "fixed";
+        const noSnap = node.getAttribute("data-tour-nosnap") === "1";
+        if (!isFixed && !noSnap) {
+          node.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
       } catch {
         // ignore scroll failures
       }
@@ -781,13 +803,50 @@ export default function OnboardingTour() {
       window.removeEventListener("scroll", handleScroll, true);
       window.removeEventListener("resize", measure);
       if (resizeObserver) resizeObserver.disconnect();
-      if (element) element.classList.remove("aura-tour__highlight");
+      if (element) {
+        element.classList.remove("aura-tour__highlight");
+        element.classList.remove("aura-tour__highlight--attention");
+      }
       if (highlightRef.current === element) {
         highlightRef.current = null;
       }
       setSpotlight(null);
     };
-  }, [currentStep?.highlight, activeSequence?.highlight, pendingExtraTip?.highlight, pathname, isClient]);
+  }, [
+    currentStep?.highlight,
+    activeSequence?.highlight,
+    pendingExtraTip?.highlight,
+    pathname,
+    isClient,
+    waitSignature,
+  ]);
+
+  useEffect(() => {
+    const node = highlightRef.current;
+    if (!node) return;
+    if (waitingAction) {
+      node.classList.add("aura-tour__highlight--attention");
+    } else {
+      node.classList.remove("aura-tour__highlight--attention");
+    }
+  }, [waitingAction]);
+
+  useEffect(() => {
+    if (!spotlightStyleRef.current) return;
+    if (!spotlight) {
+      spotlightStyleRef.current.textContent = "";
+      return;
+    }
+    spotlightStyleRef.current.textContent = `
+.aura-tour__spotlight[data-active="1"] {
+  top: ${spotlight.top}px;
+  left: ${spotlight.left}px;
+  width: ${spotlight.width}px;
+  height: ${spotlight.height}px;
+  border-radius: ${spotlight.radius}px;
+}
+`.trim();
+  }, [spotlight]);
 
   useEffect(() => {
     if (!isClient) return;
@@ -808,6 +867,14 @@ export default function OnboardingTour() {
       }
     };
   }, [isClient, pendingExtraTip?.scope, activeSequence?.scope, currentStep?.scope]);
+
+  useEffect(() => {
+    if (!waitSignature) {
+      setWaitingAction(false);
+      return;
+    }
+    setWaitingAction(true);
+  }, [waitSignature, setWaitingAction]);
 
 
   const anchor =
@@ -834,6 +901,7 @@ export default function OnboardingTour() {
   const showSecondary = !state.done && !pendingExtraTip;
   const secondaryLabel = currentStep?.secondaryLabel ?? "Saltar tour";
   const symbolForRouting = state.suggestedSymbol ?? recommended.symbol;
+  const primaryDisabled = waitingAction;
 
   function navigateToStage(stage: StageId, symbol?: string) {
     let path: string | null = null;
@@ -861,10 +929,12 @@ export default function OnboardingTour() {
   }
 
   function handleSecondary() {
+    if (waitingAction) return;
     markDone();
   }
 
   function handlePrimary() {
+    if (waitingAction) return;
     if (pendingExtraTip) {
       setState((prev) => ({
         ...prev,
@@ -944,6 +1014,7 @@ export default function OnboardingTour() {
   handlePrimaryRef.current = handlePrimary;
 
   function handleBack() {
+    if (waitingAction) return;
     if (pendingExtraTip || state.done) return;
     if (sequenceLength > 0 && subStepIndex > 0) {
       setSubStepIndex((prev) => Math.max(prev - 1, 0));
@@ -969,23 +1040,23 @@ export default function OnboardingTour() {
 
   useEffect(() => {
     if (!isClient) return;
-    if (pendingExtraTip) return;
-    const wait = activeSequence?.waitFor;
-    if (!wait) return;
+    if (!waitConfig) return;
     const handler = (event: Event) => {
+      if (!waitingAction) return;
       const target = event.target as HTMLElement | null;
       if (!target) return;
-      const match = target.closest(wait.selector);
+      const match = target.closest(waitConfig.selector);
       if (!match) return;
+      setWaitingAction(false);
       if (sequenceLength > 0 && subStepIndex < sequenceLength - 1) {
         setSubStepIndex((prev) => Math.min(prev + 1, sequenceLength - 1));
       } else {
         handlePrimaryRef.current();
       }
     };
-    document.addEventListener(wait.event, handler, true);
-    return () => document.removeEventListener(wait.event, handler, true);
-  }, [isClient, pendingExtraTip, activeSequence?.waitFor, sequenceLength, subStepIndex]);
+    document.addEventListener(waitConfig.event, handler, true);
+    return () => document.removeEventListener(waitConfig.event, handler, true);
+  }, [isClient, waitConfig, waitSignature, waitingAction, sequenceLength, subStepIndex, setWaitingAction]);
 
   if (!isClient) return null;
 
@@ -993,20 +1064,7 @@ export default function OnboardingTour() {
 
   const overlay = (
     <>
-      {spotlight ? (
-        <div
-          className="aura-tour__spotlight"
-          style={{
-            top: `${spotlight.top}px`,
-            left: `${spotlight.left}px`,
-            width: `${spotlight.width}px`,
-            height: `${spotlight.height}px`,
-            borderRadius: `${spotlight.radius}px`,
-          }}
-        />
-      ) : (
-        <div className="aura-tour__backdrop" />
-      )}
+      {spotlight ? <div className="aura-tour__spotlight" data-active="1" /> : <div className="aura-tour__backdrop" />}
       <div className="aura-tour__panel" data-anchor={anchor}>
         <div className="aura-tour__card">
           <div className="aura-tour__header">
@@ -1017,18 +1075,35 @@ export default function OnboardingTour() {
           <div className="aura-tour__footer">
             <div className="aura-tour__footer-left">
               {showBack && (
-                <button type="button" className="aura-tour__back" onClick={handleBack}>
+                <button
+                  type="button"
+                  className="aura-tour__back"
+                  onClick={handleBack}
+                  disabled={waitingAction}
+                >
                   Anterior
                 </button>
               )}
             </div>
             <div className="aura-tour__footer-actions">
               {showSecondary && (
-                <button type="button" className="aura-tour__secondary" onClick={handleSecondary}>
+                <button
+                  type="button"
+                  className="aura-tour__secondary"
+                  onClick={handleSecondary}
+                  disabled={waitingAction}
+                  data-locked={waitingAction ? "1" : undefined}
+                >
                   {secondaryLabel}
                 </button>
               )}
-              <button type="button" className="aura-tour__primary" onClick={handlePrimary}>
+              <button
+                type="button"
+                className="aura-tour__primary"
+                onClick={handlePrimary}
+                disabled={primaryDisabled}
+                data-locked={primaryDisabled ? "1" : undefined}
+              >
                 {ctaLabel ?? "Continuar"}
               </button>
             </div>

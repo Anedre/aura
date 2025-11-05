@@ -294,6 +294,19 @@ export default function RiskPage() {
 
   const passingSignals = evaluatedSignals.filter((item) => item.passes);
   const rejectedSignals = evaluatedSignals.filter((item) => !item.passes);
+  const ageInputId = "risk-age";
+  const ageHelpId = `${ageInputId}-help`;
+  const horizonInputId = "risk-horizon";
+  const horizonHelpId = `${horizonInputId}-help`;
+  const experienceSelectId = "risk-experience";
+  const experienceHelpId = `${experienceSelectId}-help`;
+  const incomeSelectId = "risk-income";
+  const incomeHelpId = `${incomeSelectId}-help`;
+  const drawdownSelectId = "risk-drawdown";
+  const drawdownHelpId = `${drawdownSelectId}-help`;
+  const experienceCoachHelpId = `${experienceSelectId}-coach`;
+  const incomeCoachHelpId = `${incomeSelectId}-coach`;
+  const drawdownCoachHelpId = `${drawdownSelectId}-coach`;
 
   function onCalc(e: React.FormEvent) {
     e.preventDefault();
@@ -388,85 +401,105 @@ export default function RiskPage() {
             className="grid gap-5 rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-lg"
           >
             <div className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-white/60">Edad</span>
+              <label className="text-xs font-semibold uppercase tracking-wide text-white/60" htmlFor={ageInputId}>Edad</label>
               <input
+                id={ageInputId}
+                name="risk-age"
                 type="number"
+                aria-label="Edad"
                 min={18}
                 max={99}
                 value={inputs.age}
                 onChange={(e) => setInputs({ ...inputs, age: Number(e.target.value) })}
                 className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-400/40"
+                aria-describedby={ageHelpId}
               />
-              <p className="text-xs text-white/60">{fieldHelp.age}</p>
+              <p id={ageHelpId} className="text-xs text-white/60">{fieldHelp.age}</p>
             </div>
 
             <div className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-white/60">Horizonte (años)</span>
+              <label className="text-xs font-semibold uppercase tracking-wide text-white/60" htmlFor={horizonInputId}>Horizonte (años)</label>
               <input
+                id={horizonInputId}
+                name="risk-horizon"
                 type="number"
+                aria-label="Horizonte en años"
                 min={1}
                 max={40}
                 value={inputs.horizonYears}
                 onChange={(e) => setInputs({ ...inputs, horizonYears: Number(e.target.value) })}
                 className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-400/40"
+                aria-describedby={horizonHelpId}
               />
-              <p className="text-xs text-white/60">{fieldHelp.horizon}</p>
+              <p id={horizonHelpId} className="text-xs text-white/60">{fieldHelp.horizon}</p>
             </div>
 
             <div className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-white/60">Experiencia</span>
+              <label className="text-xs font-semibold uppercase tracking-wide text-white/60" htmlFor={experienceSelectId}>Experiencia</label>
               <select
+                id={experienceSelectId}
+                name="risk-experience"
                 value={inputs.experience}
+                aria-label="Experiencia"
                 onChange={(e) => setInputs({ ...inputs, experience: e.target.value as RiskInputs["experience"] })}
                 className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-400/40"
+                aria-describedby={`${experienceHelpId}${showCoach ? ` ${experienceCoachHelpId}` : ""}`}
               >
                 <option value="none">Nunca invertí</option>
                 <option value="basic">Básica</option>
                 <option value="intermediate">Intermedia</option>
                 <option value="advanced">Avanzada</option>
               </select>
-              <p className="text-xs text-white/60">{fieldHelp.experience}</p>
+              <p id={experienceHelpId} className="text-xs text-white/60">{fieldHelp.experience}</p>
               {showCoach && (
-                <p className="text-xs text-white/60">{experienceHelp[inputs.experience]}</p>
+                <p id={experienceCoachHelpId} className="text-xs text-white/60">{experienceHelp[inputs.experience]}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-white/60">Estabilidad de ingresos</span>
+              <label className="text-xs font-semibold uppercase tracking-wide text-white/60" htmlFor={incomeSelectId}>Estabilidad de ingresos</label>
               <select
+                id={incomeSelectId}
+                name="risk-income"
                 value={inputs.incomeStability}
+                aria-label="Estabilidad de ingresos"
                 onChange={(e) => setInputs({ ...inputs, incomeStability: e.target.value as RiskInputs["incomeStability"] })}
                 className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-400/40"
+                aria-describedby={`${incomeHelpId}${showCoach ? ` ${incomeCoachHelpId}` : ""}`}
               >
                 <option value="low">Varían seguido</option>
                 <option value="medium">Regulares</option>
                 <option value="high">Muy estables</option>
               </select>
-              <p className="text-xs text-white/60">{fieldHelp.income}</p>
+              <p id={incomeHelpId} className="text-xs text-white/60">{fieldHelp.income}</p>
               {showCoach && (
-                <p className="text-xs text-white/60">{incomeHelp[inputs.incomeStability]}</p>
+                <p id={incomeCoachHelpId} className="text-xs text-white/60">{incomeHelp[inputs.incomeStability]}</p>
               )}
             </div>
 
             <div className="space-y-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-white/60">
+              <label className="text-xs font-semibold uppercase tracking-wide text-white/60" htmlFor={drawdownSelectId}>
                 Tolerancia a caída máxima (drawdown)
-              </span>
+              </label>
               <select
+                id={drawdownSelectId}
+                name="risk-drawdown"
                 value={inputs.maxDrawdownTolerance}
+                aria-label="Tolerancia a caída máxima"
                 onChange={(e) =>
                   setInputs({ ...inputs, maxDrawdownTolerance: e.target.value as RiskInputs["maxDrawdownTolerance"] })
                 }
                 className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-400/40"
+                aria-describedby={`${drawdownHelpId}${showCoach ? ` ${drawdownCoachHelpId}` : ""}`}
               >
                 <option value="10">10%</option>
                 <option value="20">20%</option>
                 <option value="35">35%</option>
                 <option value="50">50%</option>
               </select>
-              <p className="text-xs text-white/60">{fieldHelp.drawdown}</p>
+              <p id={drawdownHelpId} className="text-xs text-white/60">{fieldHelp.drawdown}</p>
               {showCoach && (
-                <p className="text-xs text-white/60">{drawdownHelp[inputs.maxDrawdownTolerance]}</p>
+                <p id={drawdownCoachHelpId} className="text-xs text-white/60">{drawdownHelp[inputs.maxDrawdownTolerance]}</p>
               )}
             </div>
 
