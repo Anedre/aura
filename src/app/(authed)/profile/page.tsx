@@ -180,6 +180,13 @@ export default function ProfilePage() {
     };
   }, [showFavPicker]);
 
+  // Integración mínima con mini-guía: abrir selector desde evento global
+  useEffect(() => {
+    const openFav = () => setShowFavPicker(true);
+    window.addEventListener("aura:open-fav", openFav);
+    return () => window.removeEventListener("aura:open-fav", openFav);
+  }, []);
+
   function emit(name: string, detail?: unknown) {
     const scope = document.querySelector('[data-tour="profile-favorite"]') || document;
     scope.dispatchEvent(new CustomEvent(name, { bubbles: true, detail }));

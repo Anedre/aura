@@ -70,6 +70,63 @@
   .aura-tour__card { animation: none !important; }
 }
 
+/* --- PostActionCoach: tarjeta compacta inferior --- */
+.aura-coach { position: fixed; inset: auto 0 env(safe-area-inset-bottom) 0; display: flex; justify-content: center; z-index: 60; pointer-events: none; }
+.aura-coach__card {
+  pointer-events: auto;
+  max-width: min(92vw, 520px);
+  margin: 0 auto 12px auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--card) 96%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.28);
+  color: var(--foreground);
+  -webkit-backdrop-filter: saturate(120%) blur(6px);
+  backdrop-filter: saturate(120%) blur(6px);
+  animation: aura-coach-in var(--aura-transition) var(--aura-ease) both;
+}
+.aura-coach__title { font-size: var(--font-size-sm); font-weight: 600; line-height: var(--line-height-snug); }
+.aura-coach__detail { font-size: var(--font-size-xs); opacity: 0.9; margin-top: 4px; }
+.aura-coach__actions { display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end; }
+
+@keyframes aura-coach-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .aura-coach__card { animation: none !important; }
+}
+
+/* --- IntroJourney (pantalla completa minimalista) --- */
+.aura-intro { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: color-mix(in oklab, var(--background) 55%, black); }
+.aura-intro__viewport { width: min(680px, 92vw); padding: 16px; }
+.aura-intro__card { position: relative; overflow: hidden; border-radius: 16px; background: linear-gradient(180deg, color-mix(in oklab, var(--card) 94%, transparent), color-mix(in oklab, var(--muted) 86%, transparent)); border: 1px solid color-mix(in oklab, var(--border) 72%, transparent); box-shadow: 0 20px 60px rgba(0,0,0,0.45); animation: aura-intro-in 360ms var(--aura-ease) both; }
+.aura-intro__illus { position: absolute; inset: 0; pointer-events: none; }
+.aura-intro__blob { position: absolute; filter: blur(34px); opacity: 0.4; }
+.aura-intro__blob--1 { top: -10%; right: -8%; width: 280px; height: 280px; background: radial-gradient(closest-side, var(--primary), transparent); animation: aura-float 8s ease-in-out infinite; }
+.aura-intro__blob--2 { bottom: -12%; left: -6%; width: 240px; height: 240px; background: radial-gradient(closest-side, var(--accent), transparent); animation: aura-float 9s ease-in-out infinite reverse; }
+.aura-intro__spark { position: absolute; top: 18%; left: 12%; width: 2px; height: 2px; background: white; box-shadow: 0 0 18px 8px rgba(255,255,255,0.28); border-radius: 999px; opacity: 0.7; animation: aura-spark 3.6s ease-in-out infinite; }
+.aura-intro__content { position: relative; padding: 28px 18px 18px 18px; display: grid; gap: 10px; text-align: left; }
+.aura-intro__badge { font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: color-mix(in oklab, var(--foreground) 66%, transparent); }
+.aura-intro__title { font-size: clamp(1.2rem, 3.6vw, 1.8rem); font-weight: 650; line-height: 1.2; }
+.aura-intro__detail { font-size: var(--font-size-sm); color: color-mix(in oklab, var(--foreground) 82%, transparent); }
+.aura-intro__nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.aura-intro__dots { display: inline-flex; gap: 6px; }
+.aura-intro__dot { width: 6px; height: 6px; border-radius: 999px; background: color-mix(in oklab, var(--foreground) 26%, transparent); transition: transform 220ms var(--aura-ease), background 220ms var(--aura-ease); }
+.aura-intro__dot.is-active { transform: scale(1.8); background: color-mix(in oklab, var(--foreground) 82%, transparent); }
+
+@keyframes aura-intro-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes aura-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes aura-spark { 0%,100% { opacity: 0.4; transform: translate(0,0) scale(1); } 50% { opacity: 0.8; transform: translate(4px,-3px) scale(1.1); } }
+
+@media (prefers-reduced-motion: reduce) { .aura-intro__card { animation: none !important; } .aura-intro__blob, .aura-intro__spark { animation: none !important; } }
+
+/* --- ProfileGuideLite --- */
+.aura-profile-guide { position: fixed; inset: auto 0 env(safe-area-inset-bottom) 0; display: flex; justify-content: center; z-index: 65; pointer-events: none; }
+.aura-profile-guide__card { pointer-events: auto; max-width: min(92vw, 540px); margin: 0 auto 12px auto; padding: 10px 12px; border-radius: 12px; background: color-mix(in oklab, var(--card) 96%, transparent); border: 1px solid color-mix(in oklab, var(--border) 68%, transparent); color: var(--foreground); box-shadow: 0 6px 20px rgba(0,0,0,0.28); -webkit-backdrop-filter: saturate(120%) blur(6px); backdrop-filter: saturate(120%) blur(6px); animation: aura-coach-in var(--aura-transition) var(--aura-ease) both; }
+.aura-profile-guide__title { font-size: var(--font-size-sm); font-weight: 600; line-height: var(--line-height-snug); }
+.aura-profile-guide__detail { font-size: var(--font-size-xs); opacity: 0.9; margin-top: 3px; }
+.aura-profile-guide__actions { display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end; }
+
 /* ======== Day Theme ======== */
 :root[data-theme="day"] {
   --background: #F6F8FF;
