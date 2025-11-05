@@ -120,12 +120,33 @@
 
 @media (prefers-reduced-motion: reduce) { .aura-intro__card { animation: none !important; } .aura-intro__blob, .aura-intro__spark { animation: none !important; } }
 
+/* Variaciones por slide theme */
+.aura-intro__card[data-theme-slide="welcome"] .aura-intro__blob--1 { background: radial-gradient(closest-side, var(--primary), transparent); }
+.aura-intro__card[data-theme-slide="welcome"] .aura-intro__blob--2 { background: radial-gradient(closest-side, var(--accent), transparent); }
+.aura-intro__card[data-theme-slide="realtime"] .aura-intro__blob--1 { background: radial-gradient(closest-side, var(--success), transparent); }
+.aura-intro__card[data-theme-slide="realtime"] .aura-intro__blob--2 { background: radial-gradient(closest-side, var(--primary), transparent); }
+.aura-intro__card[data-theme-slide="alerts"] .aura-intro__blob--1 { background: radial-gradient(closest-side, var(--warning), transparent); }
+.aura-intro__card[data-theme-slide="alerts"] .aura-intro__blob--2 { background: radial-gradient(closest-side, var(--accent), transparent); }
+.aura-intro__card[data-theme-slide="learn"] .aura-intro__blob--1 { background: radial-gradient(closest-side, var(--accent), transparent); }
+.aura-intro__card[data-theme-slide="learn"] .aura-intro__blob--2 { background: radial-gradient(closest-side, var(--primary), transparent); }
+.aura-intro__card[data-theme-slide="personalized"] .aura-intro__blob--1 { background: radial-gradient(closest-side, var(--primary), transparent); }
+.aura-intro__card[data-theme-slide="personalized"] .aura-intro__blob--2 { background: radial-gradient(closest-side, var(--success), transparent); }
+
+.aura-intro__dot { cursor: pointer; border: none; padding: 0; }
+.aura-intro__dot:hover { transform: scale(1.4); }
+.aura-intro__badge { animation: aura-badge-pulse 2.4s ease-in-out infinite; }
+@keyframes aura-badge-pulse { 0%,100% { opacity: 0.66; } 50% { opacity: 1; } }
+
 /* --- ProfileGuideLite --- */
 .aura-profile-guide { position: fixed; inset: auto 0 env(safe-area-inset-bottom) 0; display: flex; justify-content: center; z-index: 65; pointer-events: none; }
-.aura-profile-guide__card { pointer-events: auto; max-width: min(92vw, 540px); margin: 0 auto 12px auto; padding: 10px 12px; border-radius: 12px; background: color-mix(in oklab, var(--card) 96%, transparent); border: 1px solid color-mix(in oklab, var(--border) 68%, transparent); color: var(--foreground); box-shadow: 0 6px 20px rgba(0,0,0,0.28); -webkit-backdrop-filter: saturate(120%) blur(6px); backdrop-filter: saturate(120%) blur(6px); animation: aura-coach-in var(--aura-transition) var(--aura-ease) both; }
-.aura-profile-guide__title { font-size: var(--font-size-sm); font-weight: 600; line-height: var(--line-height-snug); }
+.aura-profile-guide__card { position: relative; pointer-events: auto; max-width: min(92vw, 540px); margin: 0 auto 12px auto; padding: 12px 14px; border-radius: 12px; background: color-mix(in oklab, var(--card) 96%, transparent); border: 1px solid color-mix(in oklab, var(--border) 68%, transparent); color: var(--foreground); box-shadow: 0 6px 20px rgba(0,0,0,0.28); -webkit-backdrop-filter: saturate(120%) blur(6px); backdrop-filter: saturate(120%) blur(6px); animation: aura-coach-in var(--aura-transition) var(--aura-ease) both; }
+.aura-profile-guide__progress-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: color-mix(in oklab, var(--border) 40%, transparent); border-radius: 12px 12px 0 0; overflow: hidden; }
+.aura-profile-guide__progress-fill { height: 100%; width: var(--progress, 0%); background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 320ms var(--aura-ease); }
+.aura-profile-guide__title { font-size: var(--font-size-sm); font-weight: 600; line-height: var(--line-height-snug); margin-top: 3px; }
 .aura-profile-guide__detail { font-size: var(--font-size-xs); opacity: 0.9; margin-top: 3px; }
-.aura-profile-guide__actions { display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end; }
+.aura-profile-guide__actions { display: flex; gap: 8px; margin-top: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.aura-profile-guide__skip { position: absolute; top: 8px; right: 10px; font-size: 11px; color: color-mix(in oklab, var(--foreground) 50%, transparent); background: none; border: none; cursor: pointer; transition: color 180ms; }
+.aura-profile-guide__skip:hover { color: color-mix(in oklab, var(--foreground) 80%, transparent); }
 
 /* ======== Day Theme ======== */
 :root[data-theme="day"] {

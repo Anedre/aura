@@ -78,7 +78,8 @@ export default function PostActionCoach() {
         if (typeof obj.id === "string") id = obj.id;
       }
       if (!id) return;
-      // minimal mapping example
+      
+      // Mapeo de eventos a tips
       if (id === "risk-completed") {
         enqueueTip({
           id: "risk-completed",
@@ -89,6 +90,33 @@ export default function PostActionCoach() {
             { label: "Entendido" },
           ],
           ttlMs: 9000,
+        });
+      } else if (id === "paper-trade") {
+        enqueueTip({
+          id: "paper-trade",
+          title: "Trade simulado ejecutado",
+          detail: "Practica sin riesgo. Revisa tu historial para analizar patrones y aprender.",
+          cta: [
+            { label: "Ver historial", href: "/paper" },
+            { label: "Entendido" },
+          ],
+          ttlMs: 8000,
+        });
+      } else if (id === "alert-enabled") {
+        enqueueTip({
+          id: "alert-enabled",
+          title: "Alerta activada",
+          detail: "Te avisaremos cuando este activo se mueva significativamente.",
+          cta: [{ label: "Entendido" }],
+          ttlMs: 6000,
+        });
+      } else if (id === "checklist-done") {
+        enqueueTip({
+          id: "checklist-done",
+          title: "¡Checklist completado!",
+          detail: "Tu perfil está al 100%. Revisa estos pasos cada trimestre para mantener todo actualizado.",
+          cta: [{ label: "Perfecto" }],
+          ttlMs: 7000,
         });
       }
     };
