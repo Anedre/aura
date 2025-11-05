@@ -322,17 +322,33 @@ export default function HomePage() {
     const pct = (delta / watchedFeed.last_close) * 100;
     return { delta, pct };
   }, [livePrice, watchedFeed]);
+  const [canStartTour, setCanStartTour] = useState(false);
+
+  useEffect(() => {
+    setCanStartTour(true);
+  }, []);
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8">
-        <header className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--muted)] px-5 py-6 shadow space-y-3">
+        <header className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--muted)] px-5 py-6 shadow space-y-3" data-tour="home-summary">
           <p className="text-xs uppercase tracking-[0.28em] text-[--primary]">Panel AURA</p>
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight">Tu dashboard de inversión</h1>
-            <p className="text-sm opacity-75">
-              Controla tus señales, practica en modo <TechTerm term="paper trading" label="demo" /> y da seguimiento a tus solicitudes desde un mismo lugar.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2 min-w-[240px] flex-1">
+              <h1 className="text-3xl font-bold tracking-tight">Tu dashboard de inversión</h1>
+              <p className="text-sm opacity-75">
+                Controla tus señales, practica en modo <TechTerm term="paper trading" label="demo" /> y da seguimiento a tus solicitudes desde un mismo lugar.
+              </p>
+            </div>
+            {canStartTour && (
+              <button
+                type="button"
+                className="btn btn-ghost whitespace-nowrap"
+                onClick={() => window.dispatchEvent(new CustomEvent("aura-tour:start"))}
+              >
+                Ver tour interactivo
+              </button>
+            )}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <Link
@@ -421,7 +437,7 @@ export default function HomePage() {
           </article>
 
           <div className="flex flex-col gap-4">
-            <article className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--muted)] px-5 py-5 shadow-sm">
+            <article className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--muted)] px-5 py-5 shadow-sm" data-tour="home-watch">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-xs uppercase opacity-60">Seguimiento en vivo</div>

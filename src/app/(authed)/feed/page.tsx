@@ -538,7 +538,7 @@ function FeedInner() {
         </section>
 
         {/* FILTROS (claros) */}
-        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex flex-wrap items-center gap-4">
+        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex flex-wrap items-center gap-4" data-tour="feed-filters">
           <div className="flex items-center gap-2">
             <label className="text-sm opacity-80">Periodo</label>
             <select
@@ -694,7 +694,7 @@ function FeedInner() {
         </section>
 
         {/* LISTA */}
-        <section className="grid gap-4">
+        <section className="grid gap-4" data-tour="feed-cards">
           {data === null ? (
             <>
               <SkeletonCard />

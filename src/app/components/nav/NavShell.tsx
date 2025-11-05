@@ -47,7 +47,7 @@ function NavList({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex-1 space-y-1">
+    <nav className="flex-1 space-y-1.5">
       {items.map((item) => {
         const active = isActive(pathname, item);
         return (
@@ -55,12 +55,10 @@ function NavList({
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition ${
-              active ? "bg-white/15" : "hover:bg-white/10"
-            }`}
+            className={`nav-link ${active ? "nav-link--active" : ""}`}
             aria-current={active ? "page" : undefined}
           >
-            <span className="text-base">{item.icon}</span>
+            <span className="nav-link__icon">{item.icon}</span>
             <span>{item.label}</span>
           </Link>
         );
@@ -110,17 +108,24 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-dvh flex flex-col bg-[color:var(--background)] text-[color:var(--foreground)]">
-      <header className="h-14 sm:h-16 border-b border-[color:var(--border)] bg-[color:var(--muted)] px-3 sm:px-4 flex items-center justify-between gap-3">
+      <header
+        className="sticky top-0 z-40 flex h-12 sm:h-14 items-center justify-between gap-3 border-b border-[color:var(--border)] px-3 sm:px-5"
+        style={{
+          background: "color-mix(in oklab, var(--muted) 92%, transparent)",
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+        }}
+      >
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="btn btn-ghost"
+            className="btn btn-ghost btn-sm"
             aria-label={mobileOpen ? "Cerrar menú" : "Abrir menú"}
             onClick={() => setMobileOpen((value) => !value)}
           >
             {mobileOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
-          <Link href="/home" className="text-base font-semibold tracking-tight sm:text-lg">
+          <Link href="/home" className="text-lg font-semibold tracking-tight aura-pressable">
             AURA
           </Link>
         </div>
@@ -132,18 +137,25 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
 
       {mobileOpen && (
         <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
-          <div className="nav-drawer h-full w-[300px] max-w-[88vw] bg-[color:var(--muted)] border-r border-[color:var(--border)] px-4 py-4 flex flex-col gap-4 shadow-xl">
+          <div
+            className="nav-drawer h-full w-[290px] max-w-[88vw] border-r border-[color:var(--border)] px-4 py-4 sm:px-5 sm:py-5 flex flex-col gap-4 shadow-xl"
+            style={{
+              background: "color-mix(in oklab, var(--muted) 94%, transparent)",
+              backdropFilter: "blur(18px)",
+              WebkitBackdropFilter: "blur(18px)",
+            }}
+          >
             <div className="flex items-center justify-between">
               <Link
                 href="/home"
-                className="text-base font-semibold"
+                className="text-lg font-semibold"
                 onClick={() => setMobileOpen(false)}
               >
                 AURA
               </Link>
               <button
                 type="button"
-                className="btn btn-ghost"
+                className="btn btn-ghost btn-sm"
                 aria-label="Cerrar menú"
                 onClick={() => setMobileOpen(false)}
               >
@@ -152,8 +164,8 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
             </div>
             <NavList items={items} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
             <div className="space-y-2 border-t border-[color:var(--border)] pt-3">
-              <ThemeToggle className="w-full" />
-              <button type="button" className="btn w-full" onClick={doLogout}>
+              <ThemeToggle className="w-full aura-pressable" />
+              <button type="button" className="btn w-full aura-pressable" onClick={doLogout}>
                 Salir
               </button>
               <div className="truncate text-xs opacity-60">{email ?? "Usuario AURA"}</div>
@@ -168,9 +180,8 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <main className="flex-1 pb-20 sm:pb-24">{children}</main>
+      <main className="flex-1 pb-20 sm:pb-24 aura-animate-up">{children}</main>
       <BottomNav items={items} />
     </div>
   );
 }
-

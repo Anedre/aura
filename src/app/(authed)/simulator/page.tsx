@@ -363,7 +363,7 @@ export default function SimulatorPage() {
         </div>
 
         {/* Grid: izquierda simulador, derecha gráfico en vivo */}
-        <section className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6">
+        <section className="grid lg:grid-cols-[minmax(0,1fr)_380px] gap-6" data-tour="simulator-panel">
           {/* Lado izquierdo: flujo guiado */}
           <div className="space-y-5">
             <div className="card p-5">

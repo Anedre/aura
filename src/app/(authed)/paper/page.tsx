@@ -114,7 +114,7 @@ function DemoTicket({ symbol, mark, onChange }: { symbol: string; mark: number |
   const closed = trades.filter(t => t.exit != null);
 
   return (
-    <aside className="card p-4 space-y-4" aria-label="Panel de simulador">
+    <aside className="card p-4 space-y-4" aria-label="Panel de simulador" data-tour="paper-ticket">
       <div className="grid grid-cols-2 gap-3">
         <div className="tooltip">
           <div className="text-xs opacity-70">Saldo base</div>
@@ -152,13 +152,13 @@ function DemoTicket({ symbol, mark, onChange }: { symbol: string; mark: number |
           <div role="tooltip" className="tooltip-panel"><div className="tooltip-title">Simular orden</div><div className="tooltip-text">Crea una operación al precio actual (sin comisiones).</div></div>
         </div>
 
-        <div className="pt-2 border-t border-white/10">
+        <div className="pt-2 border-t border-white/10" data-tour="paper-chart">
           <div className="text-sm opacity-80 mb-2 tooltip">PnL realizado<div role="tooltip" className="tooltip-panel"><div className="tooltip-title">Gráfico de PnL</div><div className="tooltip-text">Barras: PnL por trade cerrado. Línea: PnL realizado acumulado.</div></div></div>
           <PnlChart trades={closed} />
         </div>
       </div>
 
-      <div className="pt-2 border-t border-white/10">
+      <div className="pt-2 border-t border-white/10" data-tour="paper-positions">
         <div className="text-sm opacity-80 mb-2 tooltip">Operaciones abiertas<div role="tooltip" className="tooltip-panel"><div className="tooltip-title">Operaciones abiertas</div><div className="tooltip-text">Posiciones activas que aún no has cerrado.</div></div></div>
         {trades.filter(t => t.exit == null).length === 0 && (<div className="text-xs opacity-60">Sin operaciones abiertas.</div>)}
         <div className="space-y-2">

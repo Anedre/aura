@@ -383,6 +383,7 @@ export default function RiskPage() {
         </header>
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
           <form
+            data-tour="risk-form"
             onSubmit={onCalc}
             className="grid gap-5 rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-lg"
           >
@@ -483,7 +484,7 @@ export default function RiskPage() {
             </div>
           </form>
 
-          <aside className="flex flex-col gap-5 rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+          <aside className="flex flex-col gap-5 rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-lg" data-tour="risk-summary">
             <div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-xs uppercase tracking-wide text-white/60">Perfil sugerido</span>
@@ -520,7 +521,7 @@ export default function RiskPage() {
             )}
           </aside>
         </section>
-        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-lg">
+        <section className="rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-lg" data-tour="risk-signals">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">Aplicar tu perfil a las señales de Aura</h2>

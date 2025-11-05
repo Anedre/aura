@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { auraWs } from "@/lib/aura-ws";
+import { classifySymbol, mapSymbol } from "@/lib/market";
 
 export type RealtimeState = {
   price: number | null;
@@ -41,6 +42,17 @@ export function useRealtimePrice(assetId: string): RealtimeState {
   const mountedRef = useRef(false);
 
   const missingUrl = useMemo(() => !(process.env.NEXT_PUBLIC_WS_URL ?? "").trim(), []);
+  const directRoute = useMemo(() => {
+    if (!id) return null;
+    const klass = classifySymbol(id);
+    if (klass === "index") {
+      return {
+        provider: "yahoo" as const,
+        symbol: mapSymbol("yahoo", id),
+      };
+    }
+    return null;
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -57,7 +69,12 @@ export function useRealtimePrice(assetId: string): RealtimeState {
     // Subscribe with ref counting
     const prev = subscribers.get(id) ?? 0;
     subscribers.set(id, prev + 1);
-    auraWs.subscribe(id);
+    const usingDirect = !!directRoute?.symbol && !!directRoute?.provider;
+    if (usingDirect && directRoute) {
+      auraWs.subscribeSymbol(directRoute.symbol, directRoute.provider);
+    } else {
+      auraWs.subscribe(id);
+    }
 
     const onOpen = () => {
       if (!mountedRef.current) return;
@@ -128,10 +145,15 @@ export function useRealtimePrice(assetId: string): RealtimeState {
       auraWs.off("ack", onAck);
       auraWs.off("ticks", onTicks);
 
+      const usingDirect = !!directRoute?.symbol && !!directRoute?.provider;
       const count = (subscribers.get(id) ?? 1) - 1;
       if (count <= 0) {
         subscribers.delete(id);
-        auraWs.unsubscribe(id);
+        if (usingDirect && directRoute) {
+          auraWs.unsubscribeSymbol(directRoute.symbol, directRoute.provider);
+        } else {
+          auraWs.unsubscribe(id);
+        }
         // Optional: cleanup caches
         const sp = assetToSp.get(id);
         if (sp) assetToSp.delete(id);
@@ -139,8 +161,7 @@ export function useRealtimePrice(assetId: string): RealtimeState {
         subscribers.set(id, count);
       }
     };
-  }, [id, missingUrl]);
+  }, [id, missingUrl, directRoute]);
 
   return state;
 }
-

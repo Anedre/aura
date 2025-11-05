@@ -166,7 +166,7 @@ export default function InvestRequestPage() {
 
         <ExplainerSlides />
 
-        <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-4 card border border-white/10 bg-white/[0.03] p-5">
+        <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-4 card border border-white/10 bg-white/[0.03] p-5" data-tour="invest-form">
           <label className="grid gap-1">
             <span className="text-xs opacity-70 flex items-center">Símbolo <InfoTip title="Símbolo del activo" text="Ejemplos: AAPL (Apple), SPY (ETF S&P 500), BTC-USD (Bitcoin)." /></span>
             <input value={symbol} onChange={e => setSymbol(e.target.value)}

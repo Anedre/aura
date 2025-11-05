@@ -45,6 +45,15 @@ export function mapSymbol(provider: Provider, raw: string): string {
   }
   if (provider === "yahoo") {
     const s0 = raw.replace("/", "-").toUpperCase();
+    const indexMap: Record<string, string> = {
+      NDX: "^NDX",
+      NASDAQ100: "^NDX",
+      "NASDAQ-100": "^NDX",
+      NASDAQ100INDEX: "^NDX",
+    };
+    const idx = indexMap[s0];
+    if (idx) return idx;
+
     const cryptoBase = "(BTC|ETH|SOL|ADA|XRP|DOGE|BNB|TRX|MATIC|DOT|AVAX|SHIB|LTC|UNI|LINK|NEAR|ATOM|ETC|OP|ARB|TON|BCH|APT|FIL|ALGO|AAVE|SUI|SEI|PEPE)";
     const reUsdt = new RegExp(`^${cryptoBase}[-_]?USDT$`);
     const reUsd = new RegExp(`^${cryptoBase}[-_]?USD$`);
@@ -88,6 +97,7 @@ export function classifySymbol(symRaw: string): AssetClass {
   if (/([A-Z]{3})([A-Z]{3})=X$/.test(s) || /[A-Z]{3,5}\/[A-Z]{3,5}/.test(s)) return "forex";
   if (/^(BTC|ETH|SOL|ADA|XRP|DOGE|BNB|TRX|MATIC|DOT|AVAX|SHIB|LTC|UNI|LINK|NEAR|ATOM|ETC|OP|ARB|TON|BCH|APT|FIL|ALGO|AAVE|SUI|SEI|PEPE)(?:[-/]?(USD|USDT))?$/.test(s)) return "crypto";
   if (/^\^/.test(s)) return "index"; // Yahoo indices (ej. ^GSPC)
+  if (/^(NDX|NASDAQ100|NASDAQ-100)$/.test(s)) return "index";
   if (/^(SPY|QQQ|TLT|GLD|DIA|IWM|EEM|HYG|XLK|XLE|XLF|XLV|XLY|XLI|XLP|XLB|XLU)$/.test(s)) return "etf";
   if (/^[A-Z]{1,5}$/.test(s)) return "equity";
   if (/-USDT$/.test(s) || /-USD$/.test(s) || /USDT$/.test(s)) return "crypto";

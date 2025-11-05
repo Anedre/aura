@@ -53,7 +53,7 @@ export default function RegisterPage() {
       await confirmRegister(email, code);
       setMsg("Cuenta confirmada. Ahora puedes iniciar sesión.");
       // tras confirmar, que el siguiente paso sea completar su perfil
-      router.replace(`/login?next=${encodeURIComponent("/risk?first=1")}`);
+      router.replace(`/login?next=${encodeURIComponent("/profile?tour=intro")}`);
     } catch (err: unknown) {
       setMsg(errMsg(err));
     } finally {

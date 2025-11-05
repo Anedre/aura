@@ -1,7 +1,7 @@
 // src/app/asset/[symbol]/page.tsx
 "use client";
 
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 type RangeBtn = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "MAX";
@@ -271,20 +271,18 @@ function formatNumber(value: number | null | undefined, digits = 2): string {
   });
 }
 
-type RouteParams = { symbol?: string };
+type RouteParams = { symbol?: string | string[] };
 type RouteParamsPromise = Promise<RouteParams>;
 
-function extractSymbol(value: RouteParams | RouteParamsPromise | undefined): string {
+function extractSymbol(value: RouteParams | undefined): string {
   if (!value) return "";
-  if (typeof (value as RouteParamsPromise).then === "function") {
-    console.warn("AssetPage received params as a Promise; ignoring until resolved");
-    return "";
-  }
-  const params = value as RouteParams;
-  return (params.symbol ?? "").toUpperCase();
+  const raw = value.symbol;
+  const symbol = Array.isArray(raw) ? raw[0] : raw;
+  return (symbol ?? "").toUpperCase();
 }
 
-export default function AssetPage({ params }: { params?: RouteParamsPromise }) {
+export default function AssetPage({}: { params?: RouteParamsPromise }) {
+  const params = useParams<RouteParams>();
   const symbol = extractSymbol(params);
   if (!symbol) notFound();
 
@@ -541,7 +539,7 @@ export default function AssetPage({ params }: { params?: RouteParamsPromise }) {
     <main className="min-h-dvh bg-background text-foreground">
       {/* más ancho total que 6xl */}
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between" data-tour="asset-header">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-semibold flex items-center gap-2">
               <SymbolAvatar symbol={symbol} size={26} />
@@ -595,7 +593,7 @@ export default function AssetPage({ params }: { params?: RouteParamsPromise }) {
           </div>
         </section>
 
-        <div className="mb-4 space-y-3">
+        <div className="mb-4 space-y-3" data-tour="asset-price">
           <RealtimePrice assetId={symbol} className="flex flex-wrap items-center gap-2 text-sm px-3 py-2 rounded bg-white/5 border border-white/10" />
           <PriceTicker symbol={symbol} price={last} deltaPct={rangeDelta ?? null} />
         </div>
@@ -607,7 +605,7 @@ export default function AssetPage({ params }: { params?: RouteParamsPromise }) {
         <section className="gap-6 grid
                             lg:grid-cols-[minmax(0,1fr)_340px]
                             xl:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="min-h-[380px] xl:min-h-[520px] min-w-0">
+          <div className="min-h-[380px] xl:min-h-[520px] min-w-0" data-tour="asset-chart">
             <MarketChartE
               symbol={symbol}
               tf="5m"
@@ -624,13 +622,13 @@ export default function AssetPage({ params }: { params?: RouteParamsPromise }) {
             )}
           </div>
 
-          <div>
+          <div data-tour="asset-trade">
             <TradePanel symbol={symbol} lastPrice={last} />
           </div>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="card p-4 space-y-3">
+          <div className="card p-4 space-y-3" data-tour="asset-indicator">
             <div>
               <div className="text-sm font-semibold mb-2">Cómo leer el indicador predictivo</div>
               <p className="text-sm leading-relaxed">{indicatorSummary}</p>
@@ -652,7 +650,7 @@ export default function AssetPage({ params }: { params?: RouteParamsPromise }) {
               </div>
             )}
           </div>
-          <div className="card p-4">
+          <div className="card p-4" data-tour="asset-news">
             <NewsList
               title="Noticias que pueden mover este activo"
               items={symbolNews}

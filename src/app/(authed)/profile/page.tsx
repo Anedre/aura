@@ -339,7 +339,11 @@ export default function ProfilePage() {
   return (
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto flex max-w-5xl flex-col gap-8 px-3 sm:px-6 py-6 sm:py-10">
-        <header className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-background p-8 shadow-xl">
+        <header
+          className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-background p-8 shadow-xl"
+          data-tour="profile-header"
+          data-tour-target="profile-overview-section"
+        >
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             <div className="space-y-4">
               <span className="inline-flex items-center rounded-full border border-white/15 px-3 py-1 text-xs uppercase tracking-wide text-subtle">
@@ -356,10 +360,11 @@ export default function ProfilePage() {
                   type="button"
                   onClick={() => setCoachMode((v) => !v)}
                   className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-strong transition hover:bg-white/10"
+                  data-tour-target="profile-coach-toggle"
                 >
                   {coachMode ? "Ocultar ayuda paso a paso" : "Necesito ayuda simple"}
                 </button>
-                <button className="btn" type="button" onClick={onLogout}>
+                <button className="btn" type="button" onClick={onLogout} data-tour-target="profile-logout">
                   Cerrar sesion
                 </button>
               </div>
@@ -448,13 +453,13 @@ export default function ProfilePage() {
           </article>
         </section>
 
-        <section className="surface p-6">
+        <section className="surface p-6" data-tour="profile-favorite">
           <h2 className="text-lg font-semibold">Activo favorito</h2>
           <p className="mt-1 text-sm text-subtle">Elige un símbolo (ej. BTC-USD, AAPL, EURUSD=X). Se destacará en tu inicio.</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <input className="input w-48" placeholder="Símbolo" value={fav} onChange={(e) => setFav(e.target.value.toUpperCase())} />
-            <button className="btn" onClick={() => setShowFavPicker(true)}>Elegir</button>
-            <button className="btn btn-primary" onClick={saveFav}>Guardar favorito</button>
+            <button className="btn" data-tour-target="favorite-choose" onClick={() => setShowFavPicker(true)}>Elegir</button>
+            <button className="btn btn-primary" data-tour-target="favorite-save" onClick={saveFav}>Guardar favorito</button>
             {fav && <span className="chip">Actual: {fav}</span>}
           </div>
           {showFavPicker && (
@@ -466,6 +471,7 @@ export default function ProfilePage() {
                   <input
                     autoFocus
                     className="input w-full"
+                    data-tour-target="favorite-search"
                     placeholder="Escribe un símbolo (ej. BTC-USD, AAPL, EURUSD=X)"
                     value={favQuery}
                     onChange={(e) => { setFavQuery(e.target.value); setFavHighlight(-1); }}
@@ -528,11 +534,16 @@ export default function ProfilePage() {
           )}
         </section>
 
-        <section className="surface p-6">
+        <section className="surface p-6" data-tour="profile-home-filter">
           <h2 className="text-lg font-semibold">Clase preferida en inicio</h2>
           <p className="mt-1 text-sm text-subtle">Usamos esta preferencia como filtro por defecto en tu página de inicio. Puedes quitarlo desde la misma pantalla.</p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <select className="input w-56" value={prefClass} onChange={(e) => setPrefClass(e.target.value as typeof prefClass)}>
+            <select
+              className="input w-56"
+              data-tour-target="home-filter-select"
+              value={prefClass}
+              onChange={(e) => setPrefClass(e.target.value as typeof prefClass)}
+            >
               <option value="all">Todas</option>
               <option value="crypto">Cripto</option>
               <option value="forex">Forex</option>
@@ -540,12 +551,12 @@ export default function ProfilePage() {
               <option value="etf">ETF</option>
               <option value="index">Índices</option>
             </select>
-            <button className="btn btn-primary" onClick={savePrefClass}>Guardar preferencia</button>
+            <button className="btn btn-primary" data-tour-target="home-filter-save" onClick={savePrefClass}>Guardar preferencia</button>
             <span className="chip">Actual: {prefClass}</span>
           </div>
         </section>
 
-        <section className="surface p-6">
+        <section className="surface p-6" data-tour="profile-alerts">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">Preferencias y alertas</h2>
@@ -557,10 +568,11 @@ export default function ProfilePage() {
               {completionData.prefActive}/{completionData.prefTotal} activas
             </span>
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-3">
-            {(Object.keys(defaultPrefs) as PrefKey[]).map((key) => (
+          <div className="mt-4 grid gap-3 md:grid-cols-3" data-tour-target="profile-alerts-grid">
+            {(Object.keys(defaultPrefs) as PrefKey[]).map((key, idx) => (
               <div
                 key={key}
+                data-tour-target={idx === 0 ? "alerts-weekly" : undefined}
                 className={`surface-muted flex items-start gap-3 p-4 transition ${
                   prefs[key]
                     ? "border-emerald-400/60 bg-emerald-400/12 shadow-lg"
@@ -569,6 +581,7 @@ export default function ProfilePage() {
               >
                 <input
                   type="checkbox"
+                  data-tour-target={idx === 0 ? "alerts-weekly" : undefined}
                   checked={prefs[key]}
                   onChange={() => togglePref(key)}
                   className="mt-1 h-4 w-4 rounded border-white/40 bg-black/60 text-emerald-400 focus:ring-emerald-300"
@@ -582,7 +595,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        <section className="surface p-6">
+        <section className="surface p-6" data-tour="profile-checklist">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">Checklist de seguridad y habitos</h2>
@@ -602,8 +615,8 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            {checklistItems.map((item) => {
+          <div className="mt-4 grid gap-3 md:grid-cols-2" data-tour-target="profile-checklist-grid">
+            {checklistItems.map((item, idx) => {
               const checkboxId = `check-${item.id}`;
               const checked = Boolean(checklist[item.id]);
               const href = item.href;
@@ -611,6 +624,7 @@ export default function ProfilePage() {
               return (
                 <div
                   key={item.id}
+                  data-tour-target={idx === 0 ? "checklist-first" : undefined}
                   className={`surface-muted flex items-start gap-3 p-4 transition ${
                     checked
                       ? "border-emerald-400/60 bg-emerald-400/12 shadow-lg"
@@ -620,6 +634,7 @@ export default function ProfilePage() {
                   <input
                     id={checkboxId}
                     type="checkbox"
+                    data-tour-target={idx === 0 ? "checklist-first-checkbox" : undefined}
                     checked={checked}
                     onChange={() => toggleChecklist(item.id)}
                     className="mt-1 h-4 w-4 rounded border-white/40 bg-black/60 text-emerald-400 focus:ring-emerald-300"
