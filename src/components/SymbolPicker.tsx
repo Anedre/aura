@@ -75,7 +75,7 @@ export default function SymbolPicker({ open, allowClose = true, onClose, onPick,
   }
 
   return (
-    <MobileBottomSheet open={open} onClose={onClose} allowClose={allowClose} title={undefined}>
+    <MobileBottomSheet open={open} onClose={onClose} allowClose={allowClose} title={undefined} tourId="favorite-modal">
       <div className="aura-picker">
         <div className="aura-picker__hero">
           <div className="aura-picker__brand">AURA</div>

@@ -7,7 +7,7 @@ import { loadRiskProfile, type RiskProfile } from "@/lib/invest";
 import { createPortal } from "react-dom";
 
 type StageId = "welcome" | "profile" | "risk" | "feed" | "asset" | "demo" | "home" | "completed";
-type Anchor = "center" | "bottom-right" | "bottom-left";
+type Anchor = "center" | "bottom-right" | "bottom-left" | "top-center";
 type ExtraTipId = "invest" | "simulator";
 
 type WaitForConfig = {
@@ -62,6 +62,7 @@ type SpotlightBox = {
 };
 
 const STORAGE_KEY = "aura_tour_state_v2";
+const COMPACT_KEY = "aura_tour_compact_v1";
 const STAGE_FLOW: StageId[] = ["welcome", "profile", "risk", "feed", "asset", "demo", "home", "completed"];
 const DEFAULT_EXTRA_TIPS: Record<ExtraTipId, boolean> = { invest: false, simulator: false };
 const SPOTLIGHT_PADDING = 18;
@@ -224,7 +225,7 @@ function buildStageSteps(stage: StageId, ctx: StageContext): StageStep[] {
               body: <p>Elige un activo del modal para continuar. El tour avanzará automáticamente.</p>,
               highlight: "[data-tour='favorite-modal']",
               scope: "[data-tour='favorite-modal']",
-              anchor: "center",
+              anchor: "top-center",
               waitFor: { event: "aura:fav-selected", selector: "[data-tour='profile-favorite']" },
             },
           ],
@@ -604,6 +605,7 @@ export default function OnboardingTour() {
   const spotlightStyleRef = useRef<HTMLStyleElement | null>(null);
   const [spotlight, setSpotlight] = useState<SpotlightBox | null>(null);
   const [waitingAction, setWaitingAction] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => setIsClient(true), []);
 
@@ -627,6 +629,13 @@ export default function OnboardingTour() {
 
   useEffect(() => {
     if (!isClient) return;
+    // Restaurar preferencia de modo compacto
+    try {
+      const raw = window.localStorage.getItem(COMPACT_KEY);
+      if (raw != null) {
+        setCollapsed(raw === "1");
+      }
+    } catch { /* ignore */ }
     persistState(state);
   }, [state, isClient]);
 
@@ -696,6 +705,19 @@ export default function OnboardingTour() {
   }, [sequenceLength, subStepIndex]);
   const waitConfig = pendingExtraTip?.waitFor ?? activeSequence?.waitFor ?? currentStep?.waitFor ?? null;
   const waitSignature = waitConfig ? `${waitConfig.event}::${waitConfig.selector}` : null;
+
+  // Progreso dentro de la etapa (o de la secuencia si aplica)
+  const progress = useMemo(() => {
+    if (pendingExtraTip) return null;
+    const total = sequenceLength > 0 ? sequenceLength : steps.length;
+    if (!total || total <= 1) return null;
+    const activeIndex = sequenceLength > 0 ? boundedSubIndex : state.step;
+    return {
+      label: `${Math.min(activeIndex + 1, total)}/${total}`,
+      total,
+      activeIndex,
+    } as const;
+  }, [pendingExtraTip, sequenceLength, steps.length, boundedSubIndex, state.step]);
 
   useEffect(() => {
     if (!isClient) return;
@@ -887,6 +909,7 @@ export default function OnboardingTour() {
     activeSequence?.title ??
     currentStep?.title ??
     "";
+  const currentTitleForFooter = activeSequence?.title ?? currentStep?.title ?? "";
   const body =
     pendingExtraTip?.body ??
     activeSequence?.body ??
@@ -931,6 +954,25 @@ export default function OnboardingTour() {
   function handleSecondary() {
     if (waitingAction) return;
     markDone();
+  }
+
+  function handleSkipStep() {
+    // Avanza al siguiente subpaso o paso, ignorando waitFor.
+    if (sequenceLength > 0 && boundedSubIndex < sequenceLength - 1) {
+      setSubStepIndex((prev) => Math.min(prev + 1, sequenceLength - 1));
+      setWaitingAction(false);
+      return;
+    }
+    setWaitingAction(false);
+    handlePrimaryRef.current();
+  }
+
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const next = !v;
+      try { window.localStorage.setItem(COMPACT_KEY, next ? "1" : "0"); } catch {}
+      return next;
+    });
   }
 
   function handlePrimary() {
@@ -1062,18 +1104,46 @@ export default function OnboardingTour() {
 
   if (state.done && !pendingExtraTip) return null;
 
+  const cardKey = `${state.stage}:${state.step}:${boundedSubIndex}:${pendingExtraTip ? "extra" : "main"}`;
   const overlay = (
     <>
       {spotlight ? <div className="aura-tour__spotlight" data-active="1" /> : <div className="aura-tour__backdrop" />}
       <div className="aura-tour__panel" data-anchor={anchor}>
-        <div className="aura-tour__card">
+        <div key={cardKey} className="aura-tour__card" data-collapsed={collapsed ? "1" : undefined}>
           <div className="aura-tour__header">
-            <div className="aura-tour__badge">Guía interactiva · AURA</div>
-            <h2 className="aura-tour__title">{title}</h2>
+            <div className="aura-tour__header-row">
+              <div>
+                <div className="aura-tour__badge">Guía interactiva · AURA</div>
+                <h2 className="aura-tour__title">{title}</h2>
+              </div>
+              <button type="button" className="aura-tour__minimize" onClick={toggleCollapsed}>
+                {collapsed ? "Expandir" : "Compactar"}
+              </button>
+            </div>
           </div>
           <div className="aura-tour__body">{body}</div>
           <div className="aura-tour__footer">
             <div className="aura-tour__footer-left">
+              {progress && (
+                <div className="aura-tour__progress" aria-label={`Progreso ${progress.label}`}>
+                  <div className="aura-tour__dots" role="list">
+                    {Array.from({ length: progress.total }).map((_, i) => (
+                      <span
+                        key={i}
+                        role="listitem"
+                        className={`aura-tour__dot${i === progress.activeIndex ? " is-active" : ""}`}
+                        aria-current={i === progress.activeIndex ? "step" : undefined}
+                      />
+                    ))}
+                  </div>
+                  <span className="aura-tour__progress-label">{progress.label}</span>
+                  {currentTitleForFooter && (
+                    <span className="aura-tour__step-title" title={currentTitleForFooter}>
+                      · Paso {Math.min((progress?.activeIndex ?? 0) + 1, progress?.total ?? 1)}: {currentTitleForFooter}
+                    </span>
+                  )}
+                </div>
+              )}
               {showBack && (
                 <button
                   type="button"
@@ -1082,6 +1152,11 @@ export default function OnboardingTour() {
                   disabled={waitingAction}
                 >
                   Anterior
+                </button>
+              )}
+              {!pendingExtraTip && (
+                <button type="button" className="aura-tour__skip-step" onClick={handleSkipStep} disabled={waitingAction}>
+                  Omitir paso
                 </button>
               )}
             </div>

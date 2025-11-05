@@ -8,9 +8,14 @@ type MobileBottomSheetProps = {
   allowClose?: boolean; // cuando false, deshabilita cerrar por backdrop/Escape
   onClose: () => void;
   children: React.ReactNode;
+  /**
+   * Identificador opcional para integraciones (ej: guía interactiva AURA).
+   * Cuando se provee, se renderiza como data-tour="<tourId>" en el panel.
+   */
+  tourId?: string;
 };
 
-export default function MobileBottomSheet({ open, title, allowClose = true, onClose, children }: MobileBottomSheetProps) {
+export default function MobileBottomSheet({ open, title, allowClose = true, onClose, children, tourId }: MobileBottomSheetProps) {
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   // Bloquea scroll del body cuando está abierto
@@ -42,7 +47,12 @@ export default function MobileBottomSheet({ open, title, allowClose = true, onCl
         onClick={() => { if (allowClose) onClose(); }}
         aria-hidden="true"
       />
-      <div ref={panelRef} className="sheet" data-role="mobile-sheet">
+      <div
+        ref={panelRef}
+        className="sheet"
+        data-role="mobile-sheet"
+        {...(tourId ? { ["data-tour"]: tourId } : {})}
+      >
         <div className="sheet__header">
           <div className="sheet__handle" />
           {title ? <div className="sheet__title">{title}</div> : null}
