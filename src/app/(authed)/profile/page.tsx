@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getSession, logout } from "@/lib/auth";
 import SymbolAvatar from "@/components/SymbolAvatar";
-import { getAssetMeta } from "@/lib/assets.meta";
-import { classifySymbol } from "@/lib/market";
 import { notify } from "@/lib/notify";
 import SymbolPicker from "@/components/SymbolPicker";
 
@@ -137,8 +135,6 @@ export default function ProfilePage() {
   const [fav, setFav] = useState<string>("");
   const [prefClass, setPrefClass] = useState<"all"|"crypto"|"forex"|"equity"|"etf"|"index">('all');
   const [showFavPicker, setShowFavPicker] = useState(false);
-  const [favQuery, setFavQuery] = useState("");
-  const [favHighlight, setFavHighlight] = useState<number>(-1);
   const forcePick = (searchParams?.get("tour") === "1");
   const SUGGESTIONS: string[] = [
     "BTC-USD","ETH-USD","LTC-USD","LINK-USD","ADA-USD","SOL-USD","DOGE-USD","XRP-USD","BNB-USD",

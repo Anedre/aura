@@ -97,7 +97,7 @@ export default function NavShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!mobileOpen) return;
     setMobileOpen(false);
-  }, [pathname]);
+  }, [pathname, mobileOpen]);
 
   async function doLogout() {
     await logout();
