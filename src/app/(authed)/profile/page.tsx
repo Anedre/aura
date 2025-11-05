@@ -7,6 +7,7 @@ import SymbolAvatar from "@/components/SymbolAvatar";
 import { getAssetMeta } from "@/lib/assets.meta";
 import { classifySymbol } from "@/lib/market";
 import { notify } from "@/lib/notify";
+import SymbolPicker from "@/components/SymbolPicker";
 
 type Sess = {
   user_id: string;
@@ -41,7 +42,7 @@ const PREF_CLASS_KEY = "aura_pref_class";
 const defaultPrefs = {
   weeklyDigest: true,
   marketAlerts: true,
-  learningTips: false,
+  learningTips: true,
 };
 
 type PrefKey = keyof typeof defaultPrefs;
@@ -80,12 +81,7 @@ type ChecklistItem = {
 
 const checklistItems: ChecklistItem[] = [
   {
-    id: "confirmEmail",
-    title: "Confirmar correo principal",
-    detail: "Verifica que nuestros correos llegan a tu bandeja y no a spam.",
-  },
-  {
-    id: "updateRisk",
+    id: "riskProfile",
     title: "Actualizar perfil de inversion",
     detail: "Completa el asistente de riesgo para adaptar sugerencias a tu estilo.",
     href: "/risk",
@@ -276,6 +272,15 @@ export default function ProfilePage() {
     };
   }, [checklist, prefs]);
 
+  const healthWidthClass = useMemo(() => {
+    const v = Math.round(Math.min(100, Math.max(0, completionData.profileHealth)) / 5) * 5;
+    return `w-p-${v}`;
+  }, [completionData.profileHealth]);
+  const checklistWidthClass = useMemo(() => {
+    const v = Math.round(Math.min(100, Math.max(0, completionData.checklistPercent)) / 5) * 5;
+    return `w-p-${v}`;
+  }, [completionData.checklistPercent]);
+
   const firstName = useMemo(() => {
     if (!sess?.email) return "inversor";
     const base = sess.email.split("@")[0];
@@ -366,15 +371,13 @@ export default function ProfilePage() {
     <main className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto flex max-w-5xl flex-col gap-8 px-3 sm:px-6 py-6 sm:py-10">
         <header
-          className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-background p-8 shadow-xl"
+          className="panel-hero p-8"
           data-tour="profile-header"
           data-tour-target="profile-overview-section"
         >
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             <div className="space-y-4">
-              <span className="inline-flex items-center rounded-full border border-white/15 px-3 py-1 text-xs uppercase tracking-wide text-subtle">
-                Perfil personal
-              </span>
+              <span className="chip uppercase tracking-wide">Perfil personal</span>
               <div className="space-y-3">
                 <h1 className="text-3xl font-semibold leading-tight">Hola {firstName}, personalicemos tu experiencia</h1>
                 <p className="text-sm text-subtle">
@@ -385,7 +388,7 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   onClick={() => setCoachMode((v) => !v)}
-                  className="rounded-xl border border-white/20 px-4 py-2 text-sm font-medium text-strong transition hover:bg-white/10"
+                  className="btn btn-ghost"
                   data-tour-target="profile-coach-toggle"
                 >
                   {coachMode ? "Ocultar ayuda paso a paso" : "Necesito ayuda simple"}
@@ -395,20 +398,17 @@ export default function ProfilePage() {
                 </button>
               </div>
             </div>
-            <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-black/30 p-6 backdrop-blur">
+            <div className="w-full max-w-sm surface-muted p-6">
               <div className="text-xs uppercase tracking-wide text-faint">Salud del perfil</div>
               <div className="mt-3 flex items-baseline gap-3">
                 <span className="text-4xl font-semibold">{completionData.profileHealth}</span>
                 <span className="text-sm text-faint">de 100</span>
               </div>
-              <div className="mt-2 text-sm text-emerald-200">
+              <div className="mt-2 text-sm text-success">
                 Checklist {completionData.checklistPercent}% • Preferencias {completionData.prefPercent}%
               </div>
-              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all"
-                  style={{ width: `${Math.min(100, Math.max(0, completionData.profileHealth))}%` }}
-                />
+              <div className="mt-4 progress-track">
+                <div className={`progress-fill progress-smooth ${healthWidthClass}`} />
               </div>
               <p className="mt-4 text-sm text-subtle">{completionData.copy}</p>
               {completionData.nextStep && (
@@ -425,7 +425,7 @@ export default function ProfilePage() {
           <article className="surface p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Datos de la cuenta</h2>
-              <span className="rounded-full border border-emerald-400/50 bg-emerald-400/10 px-3 py-1 text-xs text-emerald-200">
+              <span className="chip-success">
                 Sesion {sess ? "activa" : "no disponible"}
               </span>
             </div>
@@ -486,9 +486,9 @@ export default function ProfilePage() {
               <p className="mt-1 text-sm text-subtle">Se destacará en tu página de inicio para acceso rápido.</p>
             </div>
             {fav && (
-              <div className="flex items-center gap-2 rounded-lg border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5">
+              <div className="chip-accent">
                 <SymbolAvatar symbol={fav} size={18} />
-                <span className="text-sm font-medium text-emerald-200">{fav}</span>
+                <span className="text-sm font-medium">{fav}</span>
               </div>
             )}
           </div>
@@ -502,111 +502,13 @@ export default function ProfilePage() {
             </button>
           </div>
           {showFavPicker && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 pt-safe sm:p-6"
-              style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
-              role="dialog"
-              aria-modal="true"
-              data-tour="favorite-modal-wrapper"
-              onKeyDown={(e) => { if (e.key === 'Escape' && !forcePick) setShowFavPicker(false); }}
-            >
-              <div
-                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                onClick={() => { if (!forcePick) setShowFavPicker(false); }}
-              />
-              <div 
-                data-tour="favorite-modal"
-                data-tour-nosnap="1"
-                className="relative z-10 w-full max-w-xl max-h-[80vh] card rounded-2xl flex flex-col shadow-2xl"
-              >
-                {/* Header */}
-                <div className="p-4 sm:p-5 flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold">Buscar símbolo</span>
-                    {!forcePick && (
-                      <button
-                        onClick={() => setShowFavPicker(false)}
-                        className="text-xs opacity-70 hover:opacity-100 transition p-1 -mr-1"
-                        aria-label="Cerrar"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Search input */}
-                <div className="p-4 sm:p-5 flex-shrink-0">
-                  <input
-                    autoFocus
-                    className="input w-full text-base"
-                    data-tour-target="favorite-search"
-                    placeholder="Buscar: BTC-USD, AAPL..."
-                    value={favQuery}
-                    onChange={(e) => { setFavQuery(e.target.value); setFavHighlight(-1); }}
-                    onKeyDown={(e) => {
-                      const q = favQuery.trim().toUpperCase();
-                      const filtered = SUGGESTIONS.filter(s => s.toUpperCase().includes(q));
-                      if (e.key === 'Enter') {
-                        const idx = favHighlight >= 0 && favHighlight < filtered.length ? favHighlight : 0;
-                        const pick = (filtered[idx] ?? q);
-                        setFav(pick); saveFav(); setShowFavPicker(false); emit("aura:fav-selected", { symbol: pick });
-                      } else if (e.key === 'Escape') { setShowFavPicker(false); }
-                      else if (e.key === 'ArrowDown') { e.preventDefault(); setFavHighlight(h => Math.min((h < 0 ? -1 : h) + 1, filtered.length - 1)); }
-                      else if (e.key === 'ArrowUp') { e.preventDefault(); setFavHighlight(h => Math.max((h < 0 ? filtered.length : h) - 1, 0)); }
-                    }}
-                  />
-                </div>
-                
-                {/* Results list */}
-                <div className="flex-1 overflow-y-auto overscroll-contain px-0">
-                  {(() => {
-                    const q = favQuery.trim().toUpperCase();
-                    const list = SUGGESTIONS.filter(s => s.toUpperCase().includes(q)).slice(0, 40);
-                    const groups: Record<string, string[]> = { crypto: [], equity: [], etf: [], forex: [], index: [], other: [] };
-                    for (const s of list) { groups[classifySymbol(s)]?.push(s); }
-                    const order: Array<keyof typeof groups> = ['crypto','equity','etf','forex','index','other'];
-                    const labels: Record<string,string> = { crypto: 'Cripto', equity: 'Acciones', etf: 'ETF', forex: 'Forex', index: 'Índices', other: 'Otros' };
-                    const flat: Array<{k:string; s:string}> = [];
-                    order.forEach(k => { groups[k].forEach(s => flat.push({k, s})); });
-                    if (flat.length === 0) return (<div className="px-3 py-8 text-center text-sm opacity-70">Sin resultados</div>);
-                    return flat.map((row, i) => {
-                      const s = row.s; const m = getAssetMeta(s);
-                      const showHeader = i === 0 || flat[i-1].k !== row.k;
-                      const active = i === favHighlight;
-                      return (
-                        <div key={`${row.k}-${s}`}>
-                          {showHeader && (
-                            <div className="sticky top-0 bg-background/95 backdrop-blur px-3 py-2 text-xs uppercase tracking-wide opacity-70 border-b border-white/5">{labels[row.k] ?? row.k}</div>
-                          )}
-                          <button
-                            className={`w-full text-left px-3 py-3 transition touch-manipulation ${active ? 'bg-white/15' : 'hover:bg-white/10 active:bg-white/15'} ${s===fav? 'ring-1 ring-emerald-400/40 bg-emerald-500/10':''}`}
-                            onMouseEnter={() => setFavHighlight(i)}
-                            onFocus={() => setFavHighlight(i)}
-                            onClick={() => { setFav(s); saveFav(); setShowFavPicker(false); emit("aura:fav-selected", { symbol: s }); }}
-                          >
-                            <span className="inline-flex items-center gap-2">
-                              <SymbolAvatar symbol={s} size={20} />
-                              <span className="font-medium text-base">{s}</span>
-                              {m?.name && <span className="opacity-70 text-xs truncate">{m.name}</span>}
-                            </span>
-                          </button>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-                
-                {/* Footer hints */}
-                <div className="p-4 sm:p-5 flex-shrink-0 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-between text-xs opacity-60">
-                    <span className="hidden sm:inline">↑↓ Navegar • Enter: Seleccionar</span>
-                    <span className="sm:hidden">Toca para seleccionar</span>
-                    <span>{forcePick ? 'Modo tour activo' : 'Toca fuera para cerrar'}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SymbolPicker
+              open={showFavPicker}
+              allowClose={!forcePick}
+              onClose={() => setShowFavPicker(false)}
+              suggestions={SUGGESTIONS}
+              onPick={(s: string) => { setFav(s); saveFav(); setShowFavPicker(false); emit("aura:fav-selected", { symbol: s }); }}
+            />
           )}
         </section>
 
@@ -697,11 +599,8 @@ export default function ProfilePage() {
               <span className="text-xs uppercase tracking-wide text-faint">
                 {completionData.doneCount}/{completionData.totalCount} completado
               </span>
-              <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-emerald-400 transition-all"
-                  style={{ width: `${Math.min(100, Math.max(0, completionData.checklistPercent))}%` }}
-                />
+              <div className="mt-2 progress-track progress-mini">
+                <div className={`progress-fill progress-smooth ${checklistWidthClass}`} />
               </div>
             </div>
           </div>
