@@ -1,0 +1,739 @@
+# PROMPT FRONTEND — AURA (UX, Layout, Historias + Gherkin) — **SOLO FRONTEND**
+
+**Rol del modelo (SISTEMA):** Eres un *Lead UX & Frontend Architect & Builder* para la app **AURA**. Diseñas la experiencia, defines el sistema de diseño y **generas el código del frontend** (web mobile‑first + empaquetable), con foco en **usuarios sin experiencia en finanzas**. Entrega artefactos listos para implementación, pruebas y despliegue local.
+
+**Objetivo:** Generar la **aplicación frontend** de AURA (no solo la especificación), integrando/consumiendo las APIs de predicción, alertas y backtesting mediante **mocks MSW** en desarrollo. Entregar **código ejecutable** y **documentación UX**: arquitectura de UI, sitemap, sistema de diseño (tokens/components), historias con Gherkin, FR/NFR de UI, estados de carga/error/vacío, microcopy, accesibilidad, pruebas y DoD.
+
+**Restricciones de alcance:** No implementes lógica ni arquitectura backend. **Sí debes** especificar los **contratos de integración** necesarios (endpoints, payloads, paginación, códigos de error, auth) para que el frontend se **junte** con los servicios de predicción/alertas/backtesting; usa mocks/MSW basados en esos contratos.
+
+> **Nota Gherkin:** Usa siempre palabras clave Gherkin en inglés (`Feature`, `Scenario`, `Scenario Outline`, `Given`, `When`, `Then`, `And`) y mantén el contenido de pasos en español. Prefiere `Scenario Outline + Examples` cuando haya parametrización.
+
+---
+
+## 1) Alcance
+
+* **Plataformas:** Web responsiva (mobile-first, breakpoints XS–XL) y empaquetable a móvil (Capacitor/Expo al final del proyecto).
+* **Stack sugerido (no obligatorio):** Next.js 15 + React + TypeScript + TailwindCSS + Motion (ex Framer Motion) + i18n (next-intl) + Recharts/Lightweight-Charts para gráficos + Zustand/Redux Toolkit para estado de UI + Storybook + Playwright/Cypress + Testing Library + MSW (Mock Service Worker) para **simular API**.
+* **Contexto de dominio (solo para UI):** La UI muestra **recomendaciones** con rótulos de estado (p. ej., *Compra sugerida*, *Incertidumbre*, *Sin señal*), junto a **nivel de certeza** y una **explicación breve**. Los datos pueden ser **mockeados** en desarrollo.
+* **Lenguaje en UI:** Simple y pedagógico (ej. *Nivel de certeza* en vez de *confianza*, *Meta de ganancia* en vez de *take profit*). La documentación interna puede ser técnica.
+
+---
+
+## 2) Principios de diseño UX
+
+* **Claridad para principiantes:** Jerarquías visuales simples; evitar sobrecarga cognitiva.
+* **Consistencia:** Sistema de diseño con tokens y componentes reutilizables.
+* **Acompañamiento:** Onboarding guiado, tooltips contextuales y microlecciones in-app.
+* **Accesibilidad:** Cumplir **WCAG 2.1 AA** (contrastes, focus visible, navegación por teclado, ARIA labels) y soporte de tamaño de fuente del SO.
+* **Feedback inmediato:** Skeletons, loaders discretos, banners de red, toasts de confirmación, placebos en interacciones críticas.
+* **Control del usuario:** Preferencias simples (tema, idioma, unidades, notificaciones UI), y *undo* cuando sea posible.
+* **Economía de interacción:** Máximo 2–3 toques para tareas frecuentes (agregar activo, ver señal, guardar en lista).
+
+---
+
+## 3) Sitemap y Layout
+
+**Sitemap (alto nivel):**
+
+* **Onboarding** (bienvenida → consentimiento → tutorial breve)
+* **Auth** (registrar / iniciar sesión / recuperar acceso)
+* **Home / Feed** (lista de activos + filtros + buscador + tarjetas con estado)
+* **Detalle de Activo** (gráfico OHLCV, estado de señal, nivel de certeza, explicación, métricas básicas, añadir a lista, alertas)
+* **Watchlist** (favoritos, ordenación, agrupación)
+* **Alertas** (asistente paso a paso para crear/modificar)
+* **Backtesting (vista)** (comparación visual AURA vs buy & hold; resultados mockeados)
+* **Academia** (microlecciones, glosario)
+* **Perfil & Preferencias** (tema, idioma, zona, privacidad UI, accesibilidad)
+* **Legal UI** (disclaimer educativo, términos, privacidad)
+
+**Layout base (mobile-first):**
+
+* **Header** contextual (logo/marca + acción primaria o back).
+* **TabBar** inferior (Home, Watchlist, Alertas, Academia, Perfil).
+* **Contenedores** con cards (elevación suave, esquinas 2xl), tipografías con escala clara (H1/H2/Body/Caption).
+* **Grillas**: 4–12 columnas fluidas en desktop; gutters 8–16 px.
+
+---
+
+## 4) Sistema de Diseño (tokens y componentes)
+
+**Tokens (ejemplo):**
+
+* **Color:** `--brand-500`, `--accent-500`, `--success-500`, `--warning-500`, `--danger-500`; fondos `--bg`, `--surface`, textos `--text-primary/secondary/muted`. Modos **light/dark**.
+* **Tipografía:** Escala modular, tamaños base 14–16 px, line-height 1.4–1.6; pesos 400/600/700.
+* **Espaciado:** 4, 8, 12, 16, 24, 32.
+* **Borde/elevación:** radios 12–16 px; sombras suaves.
+
+**Componentes UI:**
+
+* **Navegación:** AppBar, TabBar, Drawer, Breadcrumb (desktop).
+* **Entrada:** Input, Select, SegmentedControl, Date/Time picker, Slider, Toggle, Checkbox, Radio, SearchField, Chip de filtro.
+* **Visualización:** Card de activo, Badge de estado (*Compra sugerida / Incertidumbre / Sin señal*), Tooltip/Coachmark, Banner, Toast, Modal, EmptyState, Skeleton, Paginación, Tabla simple, Sparkline, Gráfico OHLCV.
+* **Acción:** Button (primario/secundario/terciario), FAB contextual, IconButton.
+
+**Estados estándar:** *loading*, *success*, *warning*, *error*, *empty*. Todos con variantes accesibles.
+
+---
+
+## 5) Requisitos Funcionales (Frontend)
+
+1. **Onboarding guiado** con consentimiento y tutorial de 3–5 pasos (skippable).
+2. **Búsqueda y filtros** de activos en Feed (texto, categoría, volatilidad, precio, mercado).
+3. **Tarjeta de activo** con: símbolo, precio, cambio, **estado de señal**, **nivel de certeza**, acceso a detalle.
+4. **Detalle de activo** con gráfico OHLCV interactivo (pan/zoom), estado, explicación breve y glosario contextual.
+5. **Watchlist**: añadir/quitar, reordenar, agrupar, persistir en cliente (y sincronizar cuando el backend exista).
+6. **Alertas (UI)**: asistente paso a paso para definir condición (por ejemplo, *cuando cambie el estado* o *cuando el precio cruce X*), previsualización y resumen final.
+7. **Backtesting (vista)**: muestra comparativas, KPIs y gráficos **a partir de datos mock**.
+8. **Academia**: microlecciones y glosario emergente desde tooltips.
+9. **Accesibilidad y preferencias**: tema, tamaño de fuente, idioma, unidades (USD/PEN), zona horaria, reducción de animaciones.
+10. **Estados de red**: offline banner, reintentos UI, degradación con placeholders.
+
+---
+
+### 5.1) Requisitos Funcionales — Extensiones (Frontend)
+
+* **PWA & Offline-first (UI):** Manifest (name/short_name, theme_color, icons 192/512, display=standalone); Service Worker con estrategias: **Feed** → *Stale‑While‑Revalidate* (TTL 30s), **Detalle** → *Cache‑first con revalidación* (max‑age 30s) con disclaimer visible, **estáticos** → *Cache‑first immutable*; **modo offline** en Home/Watchlist (último snapshot) y Detalle (últimos datos guardados + banner sin conexión); **cola de acciones** para Watchlist/Alertas con reintento al reconectar (simulado en frontend).
+* **Autenticación (solo UI):** Formularios de **login/registro/recuperación**, validaciones inline, medidor de fortaleza de contraseña, mostrar/ocultar, *rate‑limit UI*, reCAPTCHA (placeholder), y opción **“Explorar como invitado”** con acceso limitado.
+* **Notificaciones (solo UI):** Flujo de opt‑in con permiso del navegador; fallback a recordatorio in‑app si se deniega; panel de **Preferencias → Notificaciones** (sólo marca de UI; integración real via backend fuera de alcance).
+* **Consentimiento & Privacidad (UI):** Banner de consentimiento con granularidad (analítica, errores, personalización); página de **Privacidad de UI** con toggles; enlace a términos y políticas.
+* **Navegación y deep‑links:** Soporte para rutas profundas (`/asset/[symbol]`, `/alerts?symbol=...`); preservación de estado al recargar; scroll/Focus management correcto al cambiar de ruta.
+* **Gráficos enriquecidos (UI):** Crosshair, tooltip de OHLC, cambio de tipo (línea/vela), overlays básicos (SMA/EMA como toggles de UI), botón **“Exportar PNG”** del gráfico.
+* **Estados UI estandarizados:** Skeletons, *empty*, *error*, *loading* y *success* con componentes reutilizables y mensajes consistentes; **taxonomía de errores** (Red 4xx, 5xx, Timeout, Offline) → mapeadas a copy específica.
+* **Internacionalización avanzada:** Pluralización, formatos ES/EN (monedas, miles, fechas), reglas de redondeo financieras visibles en UI; *runtime switch* sin recargar.
+* **Accesibilidad de flujos complejos:** Wizard de Alertas con ARIA (roles `dialog`, `progressbar`, `aria-current`), focus‑trap y atajos de teclado mínimos (Esc para cerrar, Enter para continuar).
+* **Preferencias ampliadas:** Tema, fuente, unidades (USD/PEN), zona horaria, *reduce motion*, **haptic feedback** (móvil) como toggle; **restaurar valores por defecto**.
+* **Telemetría de UI (consent‑based):** Instrumentar eventos clave: `ftue_started/step/completed`, `search_used`, `filter_applied`, `chart_zoom/pan`, `watchlist_add/remove/reorder`, `alert_create/toggle`, `error_viewed`, con **nombres y payloads de UI** documentados.
+
+---
+
+## 6) Requisitos No Funcionales (Frontend)
+
+* **Rendimiento:** Lighthouse **PWA ≥ 85**, **Performance ≥ 90** en móvil; **LCP ≤ 2.5 s**, **CLS < 0.1**, **INP ≤ 200 ms** en páginas críticas (Home, Detalle).
+* **Accesibilidad:** WCAG 2.1 **AA**; score Lighthouse A11y ≥ 95.
+* **Internacionalización:** todo texto con llaves i18n; soporte ES/EN; formatos locales (fecha, número, moneda).
+* **Responsividad:** óptimo en 360×640 (móvil) hasta ≥1440×900 (desktop).
+* **Resiliencia UI:** manejo consistente de *loading/error/empty* y reintentos; no bloqueos.
+* **Observabilidad Frontend:** analítica de uso (eventos anónimos de UI), trazas de UI errors con sourcemaps.
+* **Seguridad de UX:** prevención de *misleading UI*; disclaimers visibles; sin *dark patterns*.
+
+---
+
+### 6.1) Requisitos No Funcionales — Extensiones (Frontend)
+
+* **Presupuestos de rendimiento (budget por ruta):** Home JS inicial ≤ **200 KB gz** y CSS ≤ **40 KB**; Detalle JS inicial ≤ **280 KB gz**; imágenes lazy‑loaded; importes diferidos de gráficos; `next/dynamic` para módulos pesados.
+* **Web Vitals extendidas:** TTFB (SSR/edge) ≤ **800 ms** (si aplica), **LCP ≤ 2.3 s**, **CLS < 0.08**, **INP ≤ 150 ms**, **TBT ≤ 100 ms** en móviles de gama media.
+* **Estrategia de carga:** Code‑splitting por ruta/feature, **RSC/streaming** donde aplique, *preload* de fuentes críticas, *prefetch* on‑idle de rutas próximas.
+* **Memoria y jank:** Sin fugas detectables en navegación (∆mem < **10 MB** tras 5 min idle en Detalle); *scroll jank* < **10 ms** en frames (> 55 FPS sostenidos) durante gestos en el gráfico.
+* **PWA sólida:** Lighthouse **PWA ≥ 95**; *offline start* para Home; `manifest.json` completo; SW probado con `workbox` o equivalente.
+* **Compatibilidad:** Soporte oficial: **Android Chrome ≥ 108**, **iOS Safari ≥ 16**, **Desktop Chrome/Edge ≥ 120**, **Firefox ≥ 115**, **Safari ≥ 16**; degradación elegante en navegadores fuera de matriz.
+* **i18n QA:** Cobertura **100%** de llaves; pruebas de pseudo‑localización; formatos regionales (es‑PE, en‑US) coherentes.
+* **A11y detallada:** Contraste mínimo **4.5:1** (texto normal), objetivos táctiles ≥ **44×44 px**, focus visible siempre, nombres accesibles en icon buttons, atajos documentados.
+* **Seguridad de UI:** Sanitización de cualquier HTML externo; **sin inline scripts**; compatibilidad con **CSP strict**; no registrar PII/token en logs de UI; redacción de datos sensibles en trazas.
+* **Observabilidad:** *Error boundaries* y captura `unhandledrejection`; sourcemaps en prod (protegidos); límite de tamaño de evento **≤ 10 KB**; muestreo configurable.
+* **Mantenibilidad:** TS **strict**; ESLint sin `any`; complejidad ciclomática por componente **≤ 10**; Storybook como fuente de verdad del diseño (docs MDX); comentarios de props JSDoc.
+* **Pruebas no visuales extra:** *Contract tests* de i18n (keys presentes), prueba de **estados offline/online** del SW, snapshot de accesibilidad (axe) en rutas críticas.
+
+---
+
+## 7) Historias de Usuario (completas) + Criterios Gherkin (solo frontend)
+
+### ÉPICA A — Onboarding, confianza y comprensión
+
+**HU-A1 — Bienvenida y consentimiento**
+*Como* usuario sin experiencia, *quiero* entender en 1–2 pantallas qué hace AURA y aceptar términos de uso, *para* usar la app con claridad desde el inicio.
+
+```gherkin
+Feature: Onboarding de bienvenida
+  Scenario: Aceptar términos y continuar
+    Given que abro la app por primera vez
+    When avanzo hasta la pantalla de términos y toco "Acepto"
+    Then el botón "Continuar" se habilita
+    And soy dirigido al tutorial introductorio
+```
+
+**HU-A2 — Tutorial de 3 pasos (skippable)**
+*Como* usuario principiante, *quiero* un tutorial breve sobre señales y nivel de certeza, *para* saber leer las tarjetas del feed.
+
+```gherkin
+Feature: Tutorial introductorio
+  Scenario: Completar tutorial
+    Given que veo el paso 1/3 del tutorial
+    When presiono "Siguiente" hasta el paso 3/3 y luego "Listo"
+    Then veo un toast "Tutorial completado"
+    And soy dirigido a Home
+
+  Scenario: Saltar tutorial
+    Given que estoy en el tutorial 1/3
+    When presiono "Saltar"
+    Then la app registra el tutorial como omitido
+    And soy dirigido a Home
+```
+
+**HU-A3 — Glosario contextual y tooltips**
+*Como* usuario sin experiencia, *quiero* poder abrir un glosario desde iconos de ayuda, *para* entender términos sin salir de la pantalla.
+
+```gherkin
+Feature: Ayudas contextuales
+  Scenario: Abrir glosario desde icono
+    Given una tarjeta de activo con icono de ayuda
+    When toco el icono
+    Then aparece un tooltip con "Nivel de certeza"
+    And un enlace "Aprender más" abre el glosario
+```
+
+**HU-A4 — Guía introductoria (App Tour / FTUE)**
+*Como* usuario sin experiencia, *quiero* un recorrido paso a paso por la app, *para* entender lo básico (tarjetas, señales, certeza, watchlist y alertas) y alcanzar mi **primer valor en menos de 2 minutos**.
+
+```gherkin
+Feature: App Tour — Activación y persistencia
+  Scenario: Arranque del tour en primera ejecución
+    Given abro la app por primera vez
+    When ingreso a Home
+    Then aparece un overlay del tour con el paso 1/7
+    And el estado del tour se guarda como "iniciado"
+
+  Scenario: Omitir y relanzar
+    Given veo el overlay del tour
+    When toco "Saltar"
+    Then no se vuelven a mostrar pasos en esta sesión
+    And en Perfil aparece el botón "Guíame" para relanzar el tour
+```
+
+```gherkin
+Feature: App Tour — Recorrido paso a paso
+  Scenario Outline: Mostrar coachmark anclado al elemento correcto
+    Given estoy en la pantalla "<screen>"
+    And existe el ancla de tour con id "<anchor>"
+    When avanzo al paso "<step>"
+    Then se muestra el coachmark sobre "<anchor>" con el texto "<copy>"
+    And existen los CTAs "Siguiente" y "Saltar"
+
+  Examples: Pasos
+    | screen   | anchor             | step | copy                                             |
+    | Home     | card-list          | 1    | Aquí verás tarjetas con estado y nivel de certeza|
+    | Home     | search-input       | 2    | Busca un activo por nombre o símbolo             |
+    | Home     | card-anatomy       | 3    | Esta tarjeta resume precio y la señal actual     |
+    | Detalle  | chart-ohlcv        | 4    | Explora el gráfico con pan/zoom                  |
+    | Detalle  | why-this-signal    | 5    | Explicación ELI5 del porqué de la señal          |
+    | Home     | watchlist-toggle   | 6    | Guarda activos en tu lista para revisarlos rápido|
+    | Alertas  | wizard-new-alert   | 7    | Crea una alerta cuando cambie el estado          |
+```
+
+```gherkin
+Feature: App Tour — Cierre y éxito
+  Scenario: Completar tour y registrar éxito
+    Given finalizo el paso 7/7
+    When toco "Terminar"
+    Then veo el toast "¡Listo! Ya sabes cómo empezar"
+    And se registra el evento "ftue_completed"
+```
+
+**HU-A5 — Asistente de objetivo (Goal Picker)**
+*Como* usuario sin experiencia, *quiero* elegir un objetivo simple (aprender, explorar ejemplos o configurar alertas), *para* que la app adapte el inicio a mi necesidad.
+
+```gherkin
+Feature: Asistente de objetivo
+  Scenario: Elegir "Aprender lo básico"
+    Given el asistente muestra opciones de objetivo
+    When selecciono "Aprender lo básico"
+    Then Home muestra tarjetas educativas y ejemplos
+    And el tour prioriza pasos de lectura de señal y certeza
+
+  Scenario: Elegir "Recibir alertas"
+    Given el asistente muestra opciones de objetivo
+    When selecciono "Recibir alertas"
+    Then se abre el wizard de alertas con sugerencias preconfiguradas
+    And al finalizar regreso a Home con un banner "Alertas activas"
+```
+
+**HU-A6 — Modo Principiante (UI simplificada por defecto)**
+*Como* usuario sin experiencia, *quiero* un modo con UI reducida por defecto, *para* no abrumarme con controles avanzados.
+
+```gherkin
+Feature: Modo Principiante
+  Scenario: Activado por primera vez
+    Given no tengo sesiones previas
+    When ingreso a Home
+    Then el modo principiante se muestra como activo
+    And se ocultan controles avanzados
+    And en Preferencias existe un switch "Salir del modo principiante"
+
+  Scenario: Desactivar modo principiante
+    Given el switch "Salir del modo principiante" en Preferencias
+    When lo desactivo
+    Then los controles avanzados quedan visibles
+    And la preferencia se persiste para sesiones futuras
+```
+
+---
+
+### ÉPICA B — Descubrimiento y exploración
+
+**HU-B1 — Buscar y filtrar activos**
+*Como* usuario, *quiero* buscar por nombre/símbolo y aplicar filtros, *para* encontrar activos relevantes rápido.
+
+```gherkin
+Feature: Búsqueda y filtros en Feed
+  Scenario: Búsqueda por símbolo
+    Given el campo de búsqueda visible
+    When escribo "BTC"
+    Then la lista muestra resultados que contienen "BTC"
+
+  Scenario: Filtro por estado de señal
+    Given el panel de filtros
+    When activo "Compra sugerida"
+    Then solo veo tarjetas con ese estado
+```
+
+**HU-B2 — Tarjeta de activo con señal y certeza**
+*Como* usuario, *quiero* ver en cada tarjeta el estado de señal y su nivel de certeza, *para* decidir si abrir el detalle.
+
+```gherkin
+Feature: Tarjeta de activo
+  Scenario: Mostrar estado y certeza
+    Given una tarjeta visible en el Feed
+    Then se muestra el badge de estado
+    And se muestra el texto "Nivel de certeza: <porcentaje>"
+```
+
+**HU-B3 — Ordenar y agrupar**
+*Como* usuario, *quiero* ordenar y agrupar por cambios de precio o estado, *para* priorizar mi revisión.
+
+```gherkin
+Feature: Ordenación y agrupación
+  Scenario: Ordenar por cambio 24h
+    Given el menú de ordenación
+    When selecciono "Cambio 24h"
+    Then el listado se reordena de mayor a menor
+```
+
+**HU-B4 — Feed de sugeridos (Para empezar)**
+*Como* usuario nuevo, *quiero* ver una sección de activos sugeridos cuando mi lista está vacía, *para* tener un punto de inicio.
+
+```gherkin
+Feature: Sugeridos de inicio
+  Scenario: Mostrar sección "Para empezar" cuando no hay favoritos
+    Given mi Watchlist está vacía
+    When abro Home
+    Then aparece la sección "Para empezar" con 3–5 tarjetas
+    And cada tarjeta tiene CTA "Añadir a mi lista"
+
+  Scenario Outline: Sugeridos parametrizados
+    Given la sección "Para empezar" visible
+    When observo la tarjeta de "<symbol>"
+    Then la descripción muestra "<copy>"
+
+  Examples: Sugeridos
+    | symbol  | copy                                           |
+    | BTC-USD | Ejemplo para ver cambios día a día             |
+    | AAPL    | Ejemplo de acción conocida y estable           |
+    | ETH-USD | Ejemplo de activo digital con mayor volatilidad|
+```
+
+---
+
+### ÉPICA C — Detalle, explicación y confianza
+
+**HU-C1 — Detalle de activo con gráfico interactivo**
+*Como* usuario, *quiero* un gráfico claro con pan/zoom y marcadores, *para* ver contexto antes de actuar.
+
+```gherkin
+Feature: Gráfico OHLCV
+  Scenario: Zoom y pan
+    Given el gráfico visible en Detalle
+    When hago gesto de pinch para zoom
+    Then el eje de tiempo se ajusta
+    And al arrastrar el gráfico se realiza pan sin lag visible
+```
+
+**HU-C2 — Explicación breve y transparente**
+*Como* usuario, *quiero* una explicación comprensible del porqué de la señal, *para* confiar en la recomendación.
+
+```gherkin
+Feature: Explicación de señal
+  Scenario: Ver explicación simple
+    Given el bloque "¿Por qué veo esta señal?"
+    When toco "Ver más"
+    Then se despliega un texto breve con factores clave
+    And un enlace a una microlección abre un modal educativo
+```
+
+**HU-C3 — Estados vacíos y errores elegantes**
+*Como* usuario, *quiero* mensajes claros cuando no hay datos o falla la carga, *para* saber qué hacer.
+
+```gherkin
+Feature: Empty/Error states
+  Scenario: Estado vacío en Detalle
+    Given que el gráfico no tiene datos
+    Then veo un empty state con botón "Reintentar"
+```
+
+---
+
+**HU-C4 — Mapeo de estados por umbral**
+*Como* usuario, *quiero* que la app muestre el **estado correcto** según prob_up y sigma, *para* confiar en la recomendación.
+
+```gherkin
+Feature: Presentación de estados de señal
+  Scenario Outline: Mostrar estado correcto según prob_up y sigma
+    Given existe una predicción para "<symbol>" con prob_up=<prob> y sigma=<sigma>
+    And los umbrales son thr_buy=<thr_buy> y thr_uncert=<thr_uncert>
+    When abro el detalle del activo "<symbol>"
+    Then la app muestra el estado "<estado>"
+    And el texto de certeza incluye "<certeza>"
+
+  Examples: Casos
+    | symbol  | prob | sigma | thr_buy | thr_uncert | estado           | certeza |
+    | BTC-USD | 0.72 | 0.10  | 0.70    | 0.20       | COMPRA SUGERIDA  | alta    |
+    | BTC-USD | 0.68 | 0.35  | 0.70    | 0.20       | INCERTIDUMBRE    | baja    |
+    | BTC-USD | 0.55 | 0.10  | 0.70    | 0.20       | SIN SEÑAL        | media   |
+```
+
+**HU-C5 — Explicar por qué NO es compra**
+*Como* usuario, *quiero* entender por qué una señal no es compra, *para* confiar en la decisión.
+
+```gherkin
+Feature: Explicación de no-recomendación
+  Scenario: Mostrar motivos de no compra
+    Given el estado es "SIN SEÑAL" o "INCERTIDUMBRE"
+    When toco "¿Por qué no es compra?"
+    Then se despliega un texto breve con 2–3 razones simples
+    And un enlace abre el glosario relacionado
+```
+
+**HU-C6 — Selector de intervalo y marcadores**
+*Como* usuario, *quiero* cambiar el intervalo del gráfico y ver marcadores de eventos, *para* analizar mejor el contexto.
+
+```gherkin
+Feature: Intervalos y marcadores en gráfico
+  Scenario: Cambiar de 1h a 1d
+    Given el selector de intervalo visible
+    When elijo "1d"
+    Then el gráfico actualiza la serie a velas diarias
+    And persiste mi preferencia en el cliente
+
+  Scenario: Mostrar marcadores de cambios de estado
+    Given un botón "Ver marcadores de señal"
+    When lo activo
+    Then aparecen iconos en los puntos donde cambió el estado
+```
+
+---
+
+### ÉPICA D — Watchlist y personalización
+
+**HU-D1 — Agregar a watchlist**
+*Como* usuario, *quiero* guardar activos en mi lista, *para* revisarlos rápido.
+
+```gherkin
+Feature: Watchlist
+  Scenario: Añadir desde tarjeta
+    Given una tarjeta en el Feed
+    When toco el icono "Guardar"
+    Then el icono cambia a "Guardado"
+    And aparece un toast "Añadido a tu lista"
+```
+
+**HU-D2 — Gestionar listas**
+*Como* usuario, *quiero* reordenar y agrupar mi lista, *para* organizar mis revisiones.
+
+```gherkin
+Feature: Gestión de Watchlist
+  Scenario: Reordenar por drag & drop
+    Given que mantengo presionada una tarjeta en Watchlist
+    When la arrastro a otra posición
+    Then el nuevo orden queda persistido en el cliente
+```
+
+**HU-D3 — Agrupar por categoría**
+*Como* usuario, *quiero* agrupar mi Watchlist por categoría (acciones, cripto, ETFs), *para* revisar por bloques.
+
+```gherkin
+Feature: Agrupación de Watchlist
+  Scenario: Agrupar por tipo de activo
+    Given el control de agrupación en Watchlist
+    When selecciono "Tipo de activo"
+    Then las tarjetas se agrupan en secciones "Acciones", "Cripto", "ETFs"
+```
+
+---
+
+### ÉPICA E — Alertas (solo UI)
+
+**HU-E1 — Asistente de creación de alertas**
+*Como* usuario, *quiero* un flujo guiado para crear una alerta, *para* recibir avisos cuando cambie la señal o el precio.
+
+```gherkin
+Feature: Wizard de alertas
+  Scenario: Crear alerta de cambio de estado
+    Given que inicio el asistente de alertas
+    When selecciono "Cambio de estado de señal"
+    And elijo "Compra sugerida"
+    And presiono "Guardar"
+    Then veo un resumen con el chip "Activa"
+```
+
+**HU-E2 — Editar/desactivar alerta**
+
+```gherkin
+Feature: Edición de alertas
+  Scenario: Desactivar alerta
+    Given una alerta activa en la lista
+    When toco el switch de la alerta
+    Then el estado cambia a "Inactiva"
+```
+
+**HU-E3 — Listado y filtros de alertas**
+*Como* usuario, *quiero* filtrar mis alertas por estado y tipo, *para* gestionarlas más rápido.
+
+```gherkin
+Feature: Lista de alertas con filtros
+  Scenario: Filtrar por estado "Activa"
+    Given el panel de filtros de Alertas
+    When activo "Activa"
+    Then solo veo alertas activas en la lista
+```
+
+---
+
+### ÉPICA F — Aprendizaje y confianza (Academia)
+
+**HU-F1 — Microlecciones y glosario**
+*Como* usuario, *quiero* microlecciones cortas y un glosario, *para* aprender sin salir de la app.
+
+```gherkin
+Feature: Academia básica
+  Scenario: Abrir microlección desde tooltip
+    Given un tooltip con "Aprender más"
+    When lo toco
+    Then se abre un modal con una microlección de 1–2 minutos
+```
+
+**HU-F2 — Micro‑quiz de comprensión**
+*Como* usuario, *quiero* un micro‑quiz de 1 pregunta tras una microlección, *para* validar que entendí.
+
+```gherkin
+Feature: Micro‑quiz educativo
+  Scenario: Responder y ver feedback
+    Given completo una microlección
+    When respondo el micro‑quiz
+    Then veo feedback inmediato y un enlace a "Repasar"
+```
+
+---
+
+### ÉPICA G — Rendimiento, accesibilidad y preferencia
+
+**HU-G1 — Modo oscuro y tamaño de fuente**
+*Como* usuario, *quiero* cambiar tema y tamaño de fuente, *para* leer cómodo.
+
+```gherkin
+Feature: Preferencias de apariencia
+  Scenario: Cambiar a modo oscuro
+    Given el switch "Tema oscuro"
+    When lo activo
+    Then toda la UI actualiza a paleta dark y se persiste la elección
+```
+
+**HU-G2 — Accesibilidad (teclado/lectores)**
+*Como* usuario con necesidades de accesibilidad, *quiero* navegar por teclado y screen reader, *para* usar la app sin barreras.
+
+```gherkin
+Feature: Accesibilidad
+  Scenario: Focus visible en elementos interactivos
+    Given que navego con teclado
+    Then cada botón y enlace muestra un focus ring visible
+```
+
+**HU-G3 — Estados de red y reintentos**
+*Como* usuario, *quiero* saber si estoy sin red y poder reintentar, *para* recuperar la experiencia.
+
+```gherkin
+Feature: Estado de conectividad
+  Scenario: Offline banner
+    Given que el dispositivo pierde conexión
+    Then veo un banner "Sin conexión"
+    And un botón "Reintentar" queda disponible
+```
+
+**HU-G4 — Respeto a "reduce motion"**
+*Como* persona sensible al movimiento, *quiero* reducir animaciones, *para* evitar mareos.
+
+```gherkin
+Feature: Preferencias de movimiento
+  Scenario: Detectar prefers-reduced-motion
+    Given el sistema operativo tiene activo reduce motion
+    When abro la app
+    Then las animaciones se desactivan o simplifican
+```
+
+**HU-G5 — Vista previa de tamaño de fuente**
+*Como* usuario, *quiero* previsualizar el tamaño de fuente antes de aplicarlo, *para* elegir el más cómodo.
+
+```gherkin
+Feature: Previsualización de tipografía
+  Scenario: Slider de tamaño con preview
+    Given el panel de Preferencias abierto
+    When muevo el slider de tamaño de fuente
+    Then un bloque de ejemplo refleja el tamaño seleccionado en tiempo real
+```
+
+---
+
+### ÉPICA H — Backtesting (visualización)
+
+**HU-H1 — Ver comparación AURA vs buy&hold**
+*Como* usuario, *quiero* una visualización simple de resultados históricos, *para* contextualizar la utilidad.
+
+```gherkin
+Feature: Vista de backtesting (mock)
+  Scenario: Gráfico comparativo
+    Given la pestaña Backtesting
+    When selecciono un activo de ejemplo
+    Then se muestra un gráfico con dos curvas y KPIs resumidos
+```
+
+**HU-H2 — Selector de ventana y disclaimers**
+*Como* usuario, *quiero* cambiar la ventana de tiempo del backtest y ver un disclaimer claro, *para* interpretar mejor los resultados.
+
+```gherkin
+Feature: Controles de backtesting (mock)
+  Scenario: Cambiar ventana a 6 meses
+    Given el selector de ventana en Backtesting
+    When elijo "6M"
+    Then el gráfico actualiza la ventana seleccionada
+    And debajo se muestra un disclaimer educativo visible
+```
+
+---
+
+## 7.1) Guía introductoria (App Tour / FTUE)
+
+**Propósito:** Llevar al usuario principiante al **primer valor en < 2 minutos** con un recorrido paso a paso, superpuesto a la UI (coachmarks + tooltips), con **checkpoint** para reanudar y opción de **Saltar** / **Ver luego**.
+
+**Alcance frontend:** Overlay de tour, control de estado (completado/omitido/paso actual), anclaje a elementos de UI por `data-tour-id`, microcopy ELI5, accesibilidad (teclado y lector), persistencia local (LocalStorage/IndexedDB) y eventos de analítica (`ftue_started`, `ftue_step`, `ftue_completed`, `ftue_skipped`).
+
+**Flujo sugerido (7 pasos):**
+
+1. **Home — ¿Qué estoy viendo?** Resumen de tarjetas, estados (*Compra sugerida*, *Incertidumbre*, *Sin señal*) y *Nivel de certeza*.
+2. **Búsqueda/Filtros** — Cómo encontrar un activo.
+3. **Tarjeta** — Anatomía: símbolo, cambio, badge de estado, certeza, CTA Detalle.
+4. **Detalle** — Gráfico OHLCV (pan/zoom) y bloque "¿Por qué veo esta señal?".
+5. **Explicación simple (ELI5)** — Toggle para lenguaje simple y glosario.
+6. **Watchlist** — Añadir a mi lista desde tarjeta o detalle.
+7. **Alertas** — Crear una alerta de cambio de estado (wizard) y cerrar tour.
+
+**Gherkin (formato solicitado):**
+
+```gherkin
+Feature: App Tour — Activación y persistencia
+  Scenario: Arranque del tour en primera ejecución
+    Given abro la app por primera vez
+    When ingreso a Home
+    Then aparece un overlay del tour con el paso 1/7
+    And el estado del tour se guarda como "iniciado"
+
+  Scenario: Reanudar tour desde checkpoint
+    Given el tour quedó en el paso 4/7
+    When regreso a la app
+    Then se ofrece "Reanudar tour" en un banner
+    And al aceptar continúo en el paso 4/7
+
+  Scenario: Omitir y relanzar
+    Given veo el overlay del tour
+    When toco "Saltar"
+    Then no se vuelven a mostrar pasos en esta sesión
+    And en Perfil aparece el botón "Guíame" para relanzar el tour
+```
+
+```gherkin
+Feature: App Tour — Recorrido paso a paso
+  Scenario Outline: Mostrar coachmark anclado al elemento correcto
+    Given estoy en la pantalla "<screen>"
+    And existe el ancla de tour con id "<anchor>"
+    When avanzo al paso "<step>"
+    Then se muestra el coachmark sobre "<anchor>" con el texto "<copy>"
+    And existen los CTAs "Siguiente" y "Saltar"
+
+  Examples: Pasos
+    | screen   | anchor             | step | copy                                             |
+    | Home     | card-list          | 1    | Aquí verás tarjetas con estado y nivel de certeza|
+    | Home     | search-input       | 2    | Busca un activo por nombre o símbolo             |
+    | Home     | card-anatomy       | 3    | Esta tarjeta resume precio y la señal actual     |
+    | Detalle  | chart-ohlcv        | 4    | Explora el gráfico con pan/zoom                  |
+    | Detalle  | why-this-signal    | 5    | Explicación ELI5 del porqué de la señal          |
+    | Home     | watchlist-toggle   | 6    | Guarda activos en tu lista para revisarlos rápido|
+    | Alertas  | wizard-new-alert   | 7    | Crea una alerta cuando cambie el estado          |
+```
+
+```gherkin
+Feature: App Tour — Cierre y éxito
+  Scenario: Completar tour y registrar éxito
+    Given finalizo el paso 7/7
+    When toco "Terminar"
+    Then veo el toast "¡Listo! Ya sabes cómo empezar"
+    And se registra el evento "ftue_completed"
+```
+
+**NFR de UX asociados:**
+
+* **TTFV ≤ 120 s** (Time-To-First-Value desde `ftue_started` a `ftue_completed`).
+* **Éxito FTUE ≥ 80%** en pruebas con usuarios novatos (medido por eventos y encuestas in-app breves).
+* **A11y:** el tour es navegable con teclado y legible por screen reader; focus management correcto.
+
+---
+
+## 8) Microcopy (tono y ejemplos)
+
+* **Estado:** *Compra sugerida*, *Incertidumbre*, *Sin señal*.
+* **Certeza:** *Nivel de certeza*, *Señal no confiable (alta incertidumbre)*.
+* **Acciones:** *Guardar en mi lista*, *Crear alerta*, *Ver explicación*, *Aprender más*.
+* **Errores:** *No pudimos cargar los datos. Reintentar*, *Sin conexión*.
+* **Educativo:** *Este contenido es informativo. No constituye asesoría financiera.*
+
+---
+
+## 9) Pruebas y Definición de Hecho (Frontend)
+
+* **Build & Run:** El proyecto compila y corre con `npm run dev`, `npm run build`, `npm run start`, `npm run test`, `npm run e2e`, `npm run storybook` sin errores.
+* **Lighthouse móvil:** Performance ≥90, A11y ≥95, Best Practices ≥95, SEO ≥90.
+* **Medidas Web Vitals:** LCP ≤ 2.5 s, CLS < 0.1, INP ≤ 200 ms.
+* **A11y:** Pasar tests axe-core; navegación por teclado en flujos críticos.
+* **E2E (Playwright/Cypress):** Cobertura de HU-A1/A2/B1/B2/C1/D1/E1/G1/G3/H1 con **MSW** para mocks.
+* **Storybook:** Historias de todos los componentes, con **controles** y **tests visuales**.
+* **Cobertura mínima:** unit ≥ 70% en componentes críticos; E2E verdes en CI para flujos principales.
+* **i18n:** 100% de textos por llaves; fallback definido; pruebas en ES/EN.
+* **Estados UI:** loading/empty/error en Feed, Detalle, Watchlist, Alertas.
+
+---
+
+## 10) Instrucciones de salida del generador (qué debe producir)
+
+1. **Repositorio ejecutable (Next.js 15 + TypeScript)**: `package.json`, `tsconfig.json`, `next.config.ts`, `tailwind.config.ts`, `postcss.config.js`, `.eslintrc.*`, `.prettierrc`, `.gitignore`, `.env.example`.
+2. **Estructura de carpetas**:
+
+   * `/app`: rutas **/ (feed)**, **/asset/[symbol]**, **/watchlist**, **/alerts**, **/academy**, **/profile**, **/legal**.
+   * `/components`, `/features/{feed,asset,alerts,academy}`, `/lib`, `/hooks`, `/styles`, `/i18n`, `/mocks` (MSW), `/tests` (unit), `/e2e`.
+3. **Componentes productivos**: `CardActivo`, `BadgeEstado`, `SearchBar`, `FilterChips`, `ChartOHLCV` (wrapper Lightweight-Charts), `TooltipGlosario`, `TutorialModal`, `EmptyState`, `NetworkBanner`, `Toast`, `WizardAlertas`, `PreferencesPane`, `TabBar`, `AppBar`.
+4. **Sistema de diseño**: tokens en JSON/TS, Tailwind theme extendido (paleta light/dark, tipografía, spacing, sombras), documentación de uso.
+5. **MSW**: handlers para `/assets`, `/assets/{symbol}/signal`, `/assets/{symbol}/ohlcv`, `/me/watchlist`, `/me/alerts`, `/backtest`; **fixtures** representativas; estados `200/4xx/5xx` simulados.
+6. **Gráficos**: componente `ChartOHLCV` con pan/zoom y marcadores; ejemplo de integración en Detalle.
+7. **Storybook**: stories de todos los componentes, con controles y casos `loading/error/empty`.
+8. **Testing**: unit (Testing Library + Vitest/Jest) y E2E (Playwright/Cypress) con MSW.
+9. **i18n**: llaves ES/EN y utilidades de formato (moneda/fecha) listas.
+10. **Scripts npm**: `dev`, `build`, `start`, `lint`, `test`, `e2e`, `storybook`, `test:coverage`.
+11. **Documentación**: `README.md` con cómo ejecutar, construir, testear y estructura del proyecto; explicación breve de contratos simulados.
+12. **BDD UI**: archivos `.feature` por épica (Home, Detalle, Watchlist, Alertas, Onboarding) listos para automatizar.
+
+---
+
+## 11) Notas y restricciones
+
+* Mantener el alcance **solo frontend**. Si se requiere datos, usar **mocks** y documentar contratos esperados (breve).
+* Evitar tecnicismos en la **capa visible de UI**; en documentación interna sí se permite.
+* Priorizar decisiones que reduzcan complejidad, peso y latencia del frontend.
+* Todo texto debe ser internacionalizable.
+
+---
+
+> **Fin del prompt de frontend.** Generar los artefactos y especificaciones solicitadas estrictamente desde la perspectiva de **UX/UI** y **capas de presentación**.

@@ -322,11 +322,6 @@ export default function HomePage() {
     const pct = (delta / watchedFeed.last_close) * 100;
     return { delta, pct };
   }, [livePrice, watchedFeed]);
-  const [canStartTour, setCanStartTour] = useState(false);
-
-  useEffect(() => {
-    setCanStartTour(true);
-  }, []);
 
   return (
     <main className="min-h-dvh bg-background text-foreground">
@@ -340,15 +335,6 @@ export default function HomePage() {
                 Controla tus señales, practica en modo <TechTerm term="paper trading" label="demo" /> y da seguimiento a tus solicitudes desde un mismo lugar.
               </p>
             </div>
-            {canStartTour && (
-              <button
-                type="button"
-                className="btn btn-ghost whitespace-nowrap"
-                onClick={() => window.dispatchEvent(new CustomEvent("aura-tour:start"))}
-              >
-                Ver tour interactivo
-              </button>
-            )}
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <Link
@@ -567,7 +553,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="grid gap-3">
+        <section className="grid gap-3" data-tour="home-feed">
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold uppercase opacity-70">Señales destacadas</h2>
             <Link href="/feed" className="text-xs text-[--primary] hover:underline">

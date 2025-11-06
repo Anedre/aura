@@ -605,7 +605,7 @@ export default function AssetPage({}: { params?: RouteParamsPromise }) {
         <section className="gap-6 grid
                             lg:grid-cols-[minmax(0,1fr)_340px]
                             xl:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="min-h-[380px] xl:min-h-[520px] min-w-0" data-tour="asset-chart">
+          <div className="min-h-[380px] xl:min-h-[520px] min-w-0" data-tour="chart-canvas">
             <MarketChartE
               symbol={symbol}
               tf="5m"
@@ -628,7 +628,7 @@ export default function AssetPage({}: { params?: RouteParamsPromise }) {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="card p-4 space-y-3" data-tour="asset-indicator">
+          <div className="card p-4 space-y-3" data-tour="signal-explanation">
             <div>
               <div className="text-sm font-semibold mb-2">Cómo leer el indicador predictivo</div>
               <p className="text-sm leading-relaxed">{indicatorSummary}</p>

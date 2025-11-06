@@ -176,7 +176,7 @@ function buildActionExplanation(item: FeedItem, horizonLabel: string, confidence
   return `${uncertain} ${extra}`;
 }
 
-function Card({ item }: { item: FeedItem }) {
+function Card({ item, isFirst = false }: { item: FeedItem; isFirst?: boolean }) {
   const confPct = Math.round((item.p_conf ?? 0) * 100);
   const ts = item.ts ? new Date(item.ts) : new Date();
   const safeDate = ts.toLocaleString();
@@ -220,6 +220,7 @@ function Card({ item }: { item: FeedItem }) {
 
   return (
     <article
+      data-tour={isFirst ? "signal-card" : undefined}
       className={cn(
         "rounded-2xl border shadow-lg shadow-black/30 transition-colors duration-200 transform-gpu hover:-translate-y-0.5 fade-in-up backdrop-blur",
         theme.card,
@@ -542,7 +543,7 @@ function FeedInner() {
         </section>
 
         {/* FILTROS (claros) */}
-        <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex flex-wrap items-center gap-4" data-tour="feed-filters">
+        <section data-tour="feed-filters" className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <label className="text-sm opacity-80" htmlFor={horizonSelectId}>Periodo</label>
             <select
@@ -644,6 +645,7 @@ function FeedInner() {
 
           <div className="flex items-center gap-2">
             <input
+              data-tour="search-input"
               placeholder="Buscar símbolo…"
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -718,7 +720,7 @@ function FeedInner() {
               <SkeletonCard />
             </>
           ) : filtered.length > 0 ? (
-            filtered.map((d, i) => <Card key={`${d.symbol}-${i}`} item={d} />)
+            filtered.map((d, i) => <Card key={`${d.symbol}-${i}`} item={d} isFirst={i === 0} />)
           ) : (
             <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
               <div className="text-sm opacity-80 mb-2">
